@@ -12,7 +12,7 @@ import gym
 
 env = gym.make('gym_examples/GridWorld-v0')
 wrapped_env = relative_position.RelativePosition(env)
-print(wrapped_env.reset())     # E.g.  [-3  3], {}
+print(wrapped_env.reset(seed=1))     # E.g.  [-3  3], {}
 
 
 """
@@ -25,4 +25,6 @@ print(wrapped_env.reset())     # E.g.  [-3  3], {}
 print('\nDRONE\n')
 env = gym.make('gym_examples/GameOfDrones-v0')
 wrapped_env = relative_position.RelativeDronePosition(env)
-print(wrapped_env.reset())     # E.g.  [-3  3], {}
+# [0] print 'observation' -> positions
+# [1] print 'info' -> distances | differences
+print(wrapped_env.reset(seed=1)[0]) 

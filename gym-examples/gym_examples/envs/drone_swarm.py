@@ -1,8 +1,16 @@
+from typing import Dict, Tuple
 import gym
 from gym import spaces
 import pygame
 import numpy as np
-from collections import OrderedDict
+
+"""
+    TODO
+        - fix action_space
+        - limit observability 
+        - add matplotlib animation
+
+"""
 
 
 class GameOfDronesEnv(gym.Env):
@@ -44,13 +52,24 @@ class GameOfDronesEnv(gym.Env):
         self.yMax = 150                                     # |    m    | SCALAR - y boundary: lost drone
         self.zMax = 60                                      # |    m    | SCALAR - x boundary: lost drone
 
-        # Box function making me discretise every goddamn agent, target and obstacle to a dictionary
-        total_observations = {}
+        # AGENTS, TARGETS, OBSTACLES
+        self._agent_position = None
+        self._agent_velocity = None
+        self._target_velocity = None
+        self._obstacle_velocity = None
+
+        # OBS|AC SPACES - dynamics and integration parameters (Box function requres dictionary for every agent, target and obstacle)
+        total_observations = {}                             # |    m    | VECTOR - position vector   ∈ ℝ^{3,}
+        total_actions = {}                                  # |    N    | VECTOR - propulsion vector ∈ ℝ^{3,}
         for i in range(self.nA):
             total_observations['agent_{}'.format(i)] = spaces.Box(low=-np.array([np.float64(self.xMax), np.float64(self.yMax), np.float64(self.zMax)]).T, 
                                                                   high=np.array([np.float64(self.xMax), np.float64(self.yMax), np.float64(self.zMax)]).T,
                                                                   shape=(3,),
                                                                   dtype=np.float64)
+            total_actions['action_{}'.format(i)] = spaces.Box(low=np.array([0., 0., 0.], dtype=np.float64), 
+                                                              high=np.array([self.Fpi, self.Fpi, self.Fpi], dtype=np.float64),
+                                                              shape=(3,),
+                                                              dtype=np.float64)
         for i in range(self.nT):
             total_observations['target_{}'.format(i)] = spaces.Box(low=-np.array([np.float64(self.xMax), np.float64(self.yMax), np.float64(self.zMax)]).T, 
                                                                    high=np.array([np.float64(self.xMax), np.float64(self.yMax), np.float64(self.zMax)]).T,
@@ -61,25 +80,9 @@ class GameOfDronesEnv(gym.Env):
                                                                    high=np.array([np.float64(self.xMax), np.float64(self.yMax), np.float64(self.zMax)]).T,
                                                                    shape=(3,),
                                                                    dtype=np.float64)
-
-
-
+     
         self.observation_space = spaces.Dict(total_observations)
-
-        # FIX THIS
-        self.action_space = spaces.Discrete(4)
-
-        """
-        The following dictionary maps abstract actions from `self.action_space` to 
-        the direction we will walk in if that action is taken.
-        I.e. 0 corresponds to "right", 1 to "up" etc.
-        """
-        self._action_to_direction = {
-            0: np.array([1, 0]),
-            1: np.array([0, 1]),
-            2: np.array([-1, 0]),
-            3: np.array([0, -1]),
-        }
+        self.action_space = spaces.Dict(total_actions)
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -106,18 +109,47 @@ class GameOfDronesEnv(gym.Env):
         return total_observations
 
     def _get_info(self):
+        # for j in range(len(self._agent_position[:, 0])):
+        #     self.atDiff[j, :, :] = (self._target_position - self._agent_position[j])                                 # (nA x nT x 3)
+        #     self.aaDiff[j, :, :] = (self._agent_position - self._agent_position[j])                                 # (nA x nA x 3)
+        #     self.aoDiff[j, :, :] = (self._obstacle_position - self._agent_position[j])                               # (nA x nO x 3)
+        #     self.aaDiff[j, j, :] = np.nan
+
+        #     self.atDist[j, :] = np.linalg.norm(self._agent_position[j] - self._target_position, ord=2, axis=1)       # (nT x 3) --norm--> (nT x 1)  ∈ (nA, nT)
+        #     self.aaDist[j, :] = np.linalg.norm(self._agent_position[j] - self._agent_position, ord=2, axis=1)       # (nA x 3)  --norm--> (nA x 1) ∈ (nA, nA)
+        #     self.aoDist[j, :] = np.linalg.norm(self._agent_position[j] - self._obstacle_position, ord=2, axis=1)     # (nO x 3)  --norm--> (nO x 1) ∈ (nA, nO)
+
+        #     # don't count distances of agents with themselves
+        #     self.aaDist[j, j] = np.nan
         return {
-            "agent_to_target_distance": self.atDist,
             "agent_to_agent_distance": self.aaDist,
-            "agent_to_obstacle_distance": self.aoDist
+            "agent_to_agent_difference": self.aaDiff,
+            "agent_to_target_distance": self.atDist,
+            "agent_to_target_difference": self.atDiff,
+            "agent_to_obstacle_distance": self.aoDist, 
+            "agent_to_obstacle_difference": self.aoDiff,
         }
+    def _get_pairwise_dist_and_dist(self, obj_to_obj: Dict) -> Dict:
+        # loop throgh agents
+        for i in range(self.nA):
+            obj_to_obj["agent_to_agent_difference"][i, :, :] = (self._agent_position - self._agent_position[i])                                 # (nA x nA x 3)
+            obj_to_obj["agent_to_agent_distance"][i, :] = np.linalg.norm(self._agent_position[i] - self._agent_position, ord=2, axis=1)         # (nA x 3)  --norm--> (nA x 1) ∈ (nA, nA)
+            
+            # distance of agent to itself does not exist
+            obj_to_obj["agent_to_agent_distance"][i, i] = np.nan
+
+            obj_to_obj["agent_to_target_difference"][i, :, :] = (self._target_position - self._agent_position[i])                                # (nA x nA x 3)
+            obj_to_obj["agent_to_target_distance"][i, :] = np.linalg.norm(self._agent_position[i] - self._target_position, ord=2, axis=1)       # (nA x 3)  --norm--> (nA x 1) ∈ (nA, nA)
+
+            obj_to_obj["agent_to_obstacle_difference"][i, :, :] = (self._obstacle_position - self._agent_position[i])                           # (nA x nA x 3)
+            obj_to_obj["agent_to_obstacle_distance"][i, :] = np.linalg.norm(self._agent_position[i] - self._obstacle_position, ord=2, axis=1)   # (nA x 3)  --norm--> (nA x 1) ∈ (nA, nA)
+
+        return obj_to_obj
 
     def reset(self, seed=None, options=None):
-        # We need the following line to seed self.np_random
+        # required: we need the following line to seed self.np_random
+        np.random.seed(seed)
         super().reset(seed=seed)
-
-        # Choose the agent's location uniformly at random
-        # self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
 
         #################################################################################
         # INITIALIZE ENVIRONMENT
@@ -142,29 +174,18 @@ class GameOfDronesEnv(gym.Env):
         self._agent_velocity = np.zeros((self.nA, 3))
 
         # PAIRWISE DISTANCE ARRAYS
-        # compute differences between targets, agents and obstacles (vector)
+        # declace arrays for differences between targets, agents and obstacles (vector)
         self.atDiff = np.zeros((len(self._agent_position[:, 0]), len(self._target_position[:, 0]), 3))              # agent to target distance (nA, nT, 3)
         self.aaDiff = np.zeros((len(self._agent_position[:, 0]), len(self._agent_position[:, 0]), 3))               # agent to agent distance (nA, nA, 3)
         self.aoDiff = np.zeros((len(self._agent_position[:, 0]), len(self._obstacle_position[:, 0]), 3))            # agent to obstacle distance (nA, nO, 3)
 
-        # compute distances between targets, agents and obstacles (scalar)
+        # declace arrays for distances between targets, agents and obstacles (scalar)
         self.atDist = np.zeros((len(self._agent_position[:, 0]), len(self._target_position[:, 0])))                 # agent to target distance   (nA, nT)
         self.aaDist = np.zeros((len(self._agent_position[:, 0]), len(self._agent_position[:, 0])))                  # agent to agent distance    (nA, nA)
         self.aoDist = np.zeros((len(self._agent_position[:, 0]), len(self._obstacle_position[:, 0])))               # agent to obstacle distance (nA, nO)
         
         # check each agent (agent -> nA)
-        for j in range(len(self._agent_position[:, 0])):
-            self.atDiff[j, :, :] = (self._target_position - self._agent_position[j])                                 # (nA x nT x 3)
-            self.aaDiff[j, :, :] = (self._agent_position - self._agent_position[j])                                 # (nA x nA x 3)
-            self.aoDiff[j, :, :] = (self._obstacle_position - self._agent_position[j])                               # (nA x nO x 3)
-            self.aaDiff[j, j, :] = np.nan
-
-            self.atDist[j, :] = np.linalg.norm(self._agent_position[j] - self._target_position, ord=2, axis=1)       # (nT x 3) --norm--> (nT x 1)  ∈ (nA, nT)
-            self.aaDist[j, :] = np.linalg.norm(self._agent_position[j] - self._agent_position, ord=2, axis=1)       # (nA x 3)  --norm--> (nA x 1) ∈ (nA, nA)
-            self.aoDist[j, :] = np.linalg.norm(self._agent_position[j] - self._obstacle_position, ord=2, axis=1)     # (nO x 3)  --norm--> (nO x 1) ∈ (nA, nO)
-
-            # don't count distances of agents with themselves
-            self.aaDist[j, j] = np.nan
+        _ = self._get_pairwise_dist_and_dist(self._get_info())
         
         #################################################################################
 
@@ -206,21 +227,8 @@ class GameOfDronesEnv(gym.Env):
         # nT = 100  # |   none  | SCALAR - Number of initial targets
         #####################################################################
 
-        
-
-        # check each agent (agent -> nA)
-        for j in range(len(self._agent_position[:, 0])):
-            self.atDiff[j, :, :] = (self._target_position - self._agent_position[j])                                 # (nA x nT x 3)
-            self.aaDiff[j, :, :] = (self._agent_position - self._agent_position[j])                                 # (nA x nA x 3)
-            self.aoDiff[j, :, :] = (self._obstacle_position - self._agent_position[j])                               # (nA x nO x 3)
-            self.aaDiff[j, j, :] = np.nan
-
-            self.atDist[j, :] = np.linalg.norm(self._agent_position[j] - self._target_position, ord=2, axis=1)       # (nT x 3) --norm--> (nT x 1)  ∈ (nA, nT)
-            self.aaDist[j, :] = np.linalg.norm(self._agent_position[j] - self._agent_position, ord=2, axis=1)       # (nA x 3)  --norm--> (nA x 1) ∈ (nA, nA)
-            self.aoDist[j, :] = np.linalg.norm(self._agent_position[j] - self._obstacle_position, ord=2, axis=1)     # (nO x 3)  --norm--> (nO x 1) ∈ (nA, nO)
-
-            # don't count distances of agents with themselves
-            self.aaDist[j, j] = np.nan
+        # compute pairwise difference vectors and distance scalars
+        _ = self._get_pairwise_dist_and_dist(self._get_info())
 
         # check if agents are in the range of the targets, obstacles, agents, our boundaries
         atHit = np.where(self.atDist < self.agent_sight)                # return ij indices of m-t combos
@@ -266,10 +274,22 @@ class GameOfDronesEnv(gym.Env):
         self.atDiff = np.delete(self.atDiff, (target_mapped), axis=1)
 
         # compute cost
-        Mstar = self.nT / self.nT0
-        Tstar = (self.counter * self.dt) / self.tf
-        Lstar = ((self.nA0 - self.nA) / self.nA0)
-        PI = self.w1 * Mstar + self.w2 * Tstar + self.w3 * Lstar
+        # Mstar = self.nT / self.nT0
+        # Tstar = (self.counter * self.dt) / self.tf
+        # Lstar = ((self.nA0 - self.nA) / self.nA0)
+        # PI = self.w1 * Mstar + self.w2 * Tstar + self.w3 * Lstar
+
+        """
+        TO NORMALIZE OR NOT NORMALIZE?
+            comment:
+                - only fair way to benchmark RL vs GA is to have the initial total number of targets known (normalize)
+                - follow up study can switch to uknown # of targets (unnormalized)
+        """
+        achieved_targets = (self.nT0 - self.nT) / self.nT0
+        spent_time = (self.counter * self.dt) / self.tf
+        remaining_agents = self.nA / self.nA0
+
+        reward = self.w1 * achieved_targets + self.w2 * spent_time + self.w3 * remaining_agents
 
         # if all agents are lost, crashed, or eliminated, stop the simulation
         if self._target_position.size == 0 or self._agent_position.size == 0 or self.counter == self.total_steps:
@@ -277,8 +297,6 @@ class GameOfDronesEnv(gym.Env):
         else: 
             terminated = False
 
-
-        reward = 100 / PI
 
         observation = self._get_obs()
 

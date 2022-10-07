@@ -14,7 +14,7 @@ class RelativePosition(gym.ObservationWrapper):
 class RelativeDronePosition(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
-        self.observation_space = Box(shape=(2,), low=-np.inf, high=np.inf)
+        self.observation_space = Box(shape=(3,), low=-np.inf, high=np.inf)
 
     def observation(self, obs):
         return obs
