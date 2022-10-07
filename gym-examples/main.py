@@ -1,7 +1,7 @@
 """
 prior to running: 
     - source .env/bin/activate
-    - export PYTHONPATH="${/usr/bin/python3}:/Users/brianhowell/Desktop/Berkeley/Fall2022/COMPSCI 285/projects/"
+    - export PYTHONPATH="${/usr/bin/python3}:/Users/brianhowell/Desktop/Berkeley/Fall2022/COMPSCI 285/projects/drone_swarm_trajectory_optimization_deepRL/"
     
     RUNNING EXAMPLE ENVIRONMENT
 """
