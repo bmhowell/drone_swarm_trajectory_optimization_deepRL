@@ -9,7 +9,7 @@ epsilon = 1e-6
 
 class Twin_Q_Networks(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_dim):
-        super(QNetwork, self).__init__()
+        super().__init__()
 
         # Q1 architecture
         self.linear1 = nn.Linear(num_inputs + num_actions, hidden_dim)
@@ -66,7 +66,7 @@ class StochasticActor(nn.Module):
         return action_distribution
 
     def get_action(self, state):
-        
+
         action_distribution = self.forward(state)
         x_t = action_distribution.rsample()  # for reparameterization trick (mean + std * N(0,1))
         y_t = torch.tanh(x_t)
@@ -80,11 +80,8 @@ class StochasticActor(nn.Module):
         y_t = torch.tanh(x_t)
 
         log_prob = action_distribution.log_prob(x_t)
-
-        # Enforcing Action Bound
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + epsilon)
         log_probs = log_prob.sum(1, keepdim=True)
-        mean = torch.tanh(mean) * self.action_scale + self.action_bias
         return log_probs
 
 
