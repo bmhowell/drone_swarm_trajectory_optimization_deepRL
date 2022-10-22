@@ -21,6 +21,7 @@ the animation, comment this line out, as well as the code at the bottom (clearly
 If you would like to try your hand at getting ffmpeg to work on your computer, check out Piazza question @70 
 for my explanation on how to install this on a Mac. 
 """
+
 # plt.rcParams['animation.ffmpeg_path'] = '/usr/local/cellar/ffmpeg'
 plt.rcParams['animation.ffmpeg_path'] = '/usr/local/bin/ffmpeg'
 ################################## Defining Project Constants ##################################
@@ -35,7 +36,6 @@ Ai = 1                                          # agent characteristic area (m^2
 Cdi = 0.25                                      # agent coefficient of drag
 mi = 10                                         # agent mass (kg)
 va = [-0.2, 0.2, 0.5]                           # Air velocity (m/s)
-va = [0.2 * 10, -0.2 * 10, -0.5 * 10]                           # Air velocity (m/s)
 ra = 1.225                                      # Air Density (kg/m^3)
 Fp = 200                                        # Propulsion force magnitude (N)
 
