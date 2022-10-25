@@ -2,7 +2,7 @@ import torch
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
-from model import *
+from networks import *
 from utils import *
 
 class DDPGagent:

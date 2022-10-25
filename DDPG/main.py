@@ -52,10 +52,11 @@ import gym
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from DDPG import DDPGagent
+from ddpg import DDPGagent
 from utils import *
+from ReplayBuffer import * 
 
-env = NormalizedEnv(gym.make("Pendulum-v0"))
+env = NormalizedEnv(gym.make("Pendulum-v1"))
 
 agent = DDPGagent(env)
 noise = OUNoise(env.action_space)
