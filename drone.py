@@ -13,6 +13,11 @@ from copy import deepcopy
 from matplotlib import animation
 from matplotlib import rc
 
+"""
+    env.step(at) -> return past state
+
+"""
+
 class GameOfDronesEnv():
     
     def __init__(self, n_agents=15, n_obstacles=25, n_targets=100):
@@ -151,6 +156,16 @@ class GameOfDronesEnv():
         # - compute drag force
         # - step with forward euler
         #####################################################################
+        
+        # copy current observation
+        current_observation = np.hstack(
+                                (self._agent_state[:, :6].flatten(),            # agent positions and velocities
+                                 self._target_position[:, :3].flatten(),        # target positions
+                                 self._obstacle_position.flatten(),             # obstacle position
+                                 self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
+                                 self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
+                                 )
+                            )
 
         # map action to propulsion force vector --- WHAT TO DO HERE
         f_prop = np.zeros((self.nA0, 3))
@@ -218,7 +233,7 @@ class GameOfDronesEnv():
         n_crashed_drones = np.sum(self._agent_state[:, 7])
         reward = n_mapped_targets / self.nT0 - n_crashed_drones / self.nA0 
 
-        observation_array = np.hstack(
+        next_observation = np.hstack(
                                 (self._agent_state[:, :6].flatten(),            # agent positions and velocities
                                  self._target_position[:, :3].flatten(),        # target positions
                                  self._obstacle_position.flatten(),             # obstacle position
@@ -227,7 +242,7 @@ class GameOfDronesEnv():
                                  )
                             )
 
-        return observation_array, reward, self.done
+        return current_observation, next_observation, reward, self.done
     
     def visualize(self):
         print('-- plotting configuration --')
@@ -270,12 +285,14 @@ if __name__ == "__main__":
     done = False
     counter = 0
     while not done:
-        obs, reward, done = env.step(test_action)
+        curr_obs, next_obs, reward, done = env.step(test_action)
         print('counter = ', counter)
-        print('obs.shape: ', obs.shape)
+        print('curr_obs.shape: ', curr_obs.shape)
+        print('next_obs.shape: ', next_obs)
         print('reward: ', reward)
         print('done: ', done)
         print('')
+        # env.visualize()
         counter += 1
     
     # print('\nafter: \n', env.get_current_state()[:, :3])
