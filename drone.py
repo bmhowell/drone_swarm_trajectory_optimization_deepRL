@@ -186,14 +186,13 @@ class GameOfDronesEnv():
         action /= np.linalg.norm(action, ord=2, axis=1)[:, None]
         action *= 200
         
-        
         f_prop[self.active_agents, :] = action[self.active_agents, :]
 
         # compute drag force applies to all agents (wind)
         v_norm = np.linalg.norm(self.vA - self._agent_state[:, 3:6], 2, axis=1)[:, np.newaxis]
-        f_drag = 1. / 2. * self.rhoA * self.Cdi * self.Ai * v_norm * (self.vA - self._agent_state[self.active_agents, 3:6])
+        f_drag = 1. / 2. * self.rhoA * self.Cdi * self.Ai * v_norm * (self.vA - self._agent_state[:, 3:6])
 
-        f_total = f_drag + f_prop
+        f_total = f_drag[self.active_agents, :] + f_prop[self.active_agents, :]
 
         # step with forward euler
         self._agent_state[self.active_agents, 3:6] = self._agent_state[self.active_agents, 3:6] + self.dt * f_total / self.mi
@@ -202,8 +201,8 @@ class GameOfDronesEnv():
         
         #####################################################################
         # check for crashes, lost agents, targets achieved, etc.
-        # nA = 15  # |   none  | SCALAR - Number of initial agents
-        # nO = 25  # |   none  | SCALAR - Number of obstacles
+        # nA = 15  #  |   none  | SCALAR - Number of initial agents
+        # nO = 25  #  |   none  | SCALAR - Number of obstacles
         # nT = 100  # |   none  | SCALAR - Number of initial targets
         #####################################################################
 
@@ -234,9 +233,6 @@ class GameOfDronesEnv():
         self._agent_state[mCrash, 7] = True
         self._target_position[target_mapped, 3] = False
         self._target_position[target_mapped, 4] = True
-
-        # print('mCrash: ', mCrash)
-        # print('self.active_agents: ', self.active_agents)
 
         # get active agents and targets
         self.active_agents = self._get_active_objects(self._agent_state)

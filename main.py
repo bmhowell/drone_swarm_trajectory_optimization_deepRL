@@ -107,10 +107,10 @@ for episode in range(num_episodes):
 
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
-        a_t = test_action.flatten()
+        # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
-
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+
         if episode == num_episodes - 1:
             env.visualize()
             
@@ -120,6 +120,8 @@ for episode in range(num_episodes):
 
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
+            
+
             # Note regarding the batching. PyTorch is set up such that the first dimension is the batch dimension.
             # Therefore, if batch_size = 3 and obs_size = 32
             # obs_t_B.size() = torch.size([3, 32])
