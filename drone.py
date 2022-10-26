@@ -161,6 +161,10 @@ class GameOfDronesEnv():
             self.aaDist[agent, agent] = np.nan
         
     def step(self, action):
+        if action.shape != (self.nA0, 3):
+            action = action.reshape(self.nA0, 3)
+        
+        assert action.shape == (self.nA0, 3), "Error: action reshaping not working"
         #####################################################################
         #------------------------ compute dynamics --------------------------
         # - get action force
