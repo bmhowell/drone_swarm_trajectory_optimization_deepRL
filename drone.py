@@ -191,7 +191,7 @@ class GameOfDronesEnv():
         # compute drag force applies to all agents (wind)
         v_norm = np.linalg.norm(self.vA - self._agent_state[:, 3:6], 2, axis=1)[:, np.newaxis]
         f_drag = 1. / 2. * self.rhoA * self.Cdi * self.Ai * v_norm * (self.vA - self._agent_state[:, 3:6])
-
+ 
         f_total = f_drag[self.active_agents, :] + f_prop[self.active_agents, :]
 
         # step with forward euler
@@ -238,18 +238,23 @@ class GameOfDronesEnv():
         self.active_agents = self._get_active_objects(self._agent_state)
         self.active_targets = self._get_active_objects(self._target_position)
 
+
+        reward_nT = len(self.active_targets) - self.nT
+        reward_nA = len(self.active_agents) - self.nA
+
         self.nT = len(self.active_targets) #self.nT0 - len(target_mapped)
         self.nM = len(self.active_agents) # self.nA0 - len(mCrash)
 
-
         # if all agents are lost, crashed, or eliminated, stop the simulation
-        if self.nT <= 0 or self.nM <= 0 or self.counter == self.total_steps:
+        if self.nT <= 0 or self.nA <= 0 or self.counter == self.total_steps:
             self.done = True
 
         # compute reward - ** CONSIDER ADDING TIME
         n_mapped_targets = np.sum(self._target_position[:, 4])
         n_crashed_drones = np.sum(self._agent_state[:, 7])
-        reward = n_mapped_targets / self.nT0 - n_crashed_drones / self.nA0 
+        # print('n_crashed_drones: ', n_crashed_drones)
+        # reward = n_mapped_targets / self.nT0 - n_crashed_drones / self.nA0 
+        reward = reward_nT + reward_nA
 
         next_observation = np.hstack(
                                 (self._agent_state[:, :6].flatten(),            # agent positions and velocities
