@@ -29,7 +29,7 @@ gamma = 0.95
 tau   = 0.05
 
 # -------- Environment -------- #
-num_agents = 25
+num_agents = 1
 num_obstables = 2
 num_targets = 100 
 
@@ -110,6 +110,9 @@ for episode in range(num_episodes):
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+        
+        if done_t is True:
+            break
 
         if episode == num_episodes - 1:
             env.visualize()
