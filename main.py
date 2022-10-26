@@ -2,11 +2,6 @@
 # -------- General -------- #
 
 # -------- PyTorch -------- #
-from gzip import READ
-from modulefinder import ReplacePackage
-import re
-from readline import replace_history_item
-# from selectors import EpollSelector
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,7 +38,8 @@ obs_t, obs_t_Plus1, reward_t, done_t = env.step(test_action) # Expecting an np a
 
 # -------- Neural network parameters -------- #
 hidden_size = 64
-lr = 0.001
+lr_critic = 0.01
+lr_actor = 0.01
 
 # -------- Environment -------- #
 replay_buffer_max_size = 500
@@ -62,10 +58,10 @@ critic_target = Critic(obs_size + act_size, hidden_size, act_size)
 # Initialize the loss functions and the optimizers 
 # Define the loss function and optimizer for the critic 
 critic_loss_function = torch.nn.MSELoss()
-critic_optimizer     = torch.optim.Adam(critic.parameters())
+critic_optimizer     = torch.optim.Adam(critic.parameters(), lr=lr_critic)
 
 # Define the optimizer for the actor 
-actor_optimizer      = torch.optim.Adam(actor.parameters())
+actor_optimizer      = torch.optim.Adam(actor.parameters(), lr=lr_actor)
 
 # We initialize the target networks as copies of the original networks
 for target_param, param in zip(actor_target.parameters(), actor.parameters()):
@@ -177,7 +173,8 @@ for episode in range(num_episodes):
 
             if done_t is True:
                 break
-
+            
+    print(a_t)
     avg_critic_loss[episode]    = np.mean(critic_losses)
     avg_actor_loss[episode]     = np.mean(actor_losses)
     avg_episode_reward[episode] = np.mean(rewards)
