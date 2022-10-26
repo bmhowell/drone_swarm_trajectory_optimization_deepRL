@@ -19,7 +19,7 @@ import utils
 # -------- Training -------- #
 num_episodes = 1000
 num_time_steps_per_episode = 40
-batch_size = 3
+batch_size = 100
 gamma = 0.95
 tau   = 0.05
 
@@ -52,8 +52,8 @@ act_size = test_action.size                   # x,y,z directions of the propulsi
 #%% Initialize the actor, critic, and target networks 
 actor = Actor(obs_size, hidden_size, act_size)
 actor_target = Actor(obs_size, hidden_size, act_size)
-critic = Critic(obs_size + act_size, hidden_size, act_size)
-critic_target = Critic(obs_size + act_size, hidden_size, act_size)
+critic = Critic(obs_size + act_size, hidden_size, 1) # act_size)
+critic_target = Critic(obs_size + act_size, hidden_size, 1) # act_size)
 
 # Initialize the loss functions and the optimizers 
 # Define the loss function and optimizer for the critic 
@@ -135,7 +135,7 @@ for episode in range(num_episodes):
             # Use actor to predict next action given next states
             a_t_plus1_B = actor_target.forward(obs_t_Plus1_B)
             # Define the target Q's given the reward and the discounted next Q's
-            target_Qs = reward_t_B + gamma * critic_target.forward(obs_t_Plus1_B, a_t_plus1_B)
+            target_Qs = reward_t_B + gamma * critic_target.forward(obs_t_Plus1_B, a_t_plus1_B) * (1-done_t_B)
             # NOTE: Regarding the line above. There is a predicted Q value for every action. But there is only one reward for each group of actions. 
             # Assert that shapes of the estimated Q's and the target Q's are the same 
             assert Q_t_B.size() == target_Qs.size()
@@ -173,7 +173,7 @@ for episode in range(num_episodes):
 
             if done_t is True:
                 break
-            
+
     print(a_t)
     avg_critic_loss[episode]    = np.mean(critic_losses)
     avg_actor_loss[episode]     = np.mean(actor_losses)
