@@ -74,6 +74,17 @@ class GameOfDronesEnv():
         self._target_velocity = None
         self._obstacle_velocity = None
 
+    def get_current_observation(self):
+        current_observation = np.hstack(
+                                (self._agent_state[:, :6].flatten(),            # agent positions and velocities
+                                 self._target_position[:, :3].flatten(),        # target positions
+                                 self._obstacle_position.flatten(),             # obstacle position
+                                 self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
+                                 self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
+                                 )
+        )
+        return current_observation 
+
     def get_current_state(self):
         return self._agent_state
 
@@ -168,7 +179,12 @@ class GameOfDronesEnv():
                             )
 
         # map action to propulsion force vector --- WHAT TO DO HERE
+
+        # normalize action
         f_prop = np.zeros((self.nA0, 3))
+        action /= np.linalg.norm(action, ord=2, axis=1)[:, None]
+        action *= 200
+        
         f_prop[self.active_agents, :] = action[self.active_agents, :]
 
         # compute drag force applies to all agents (wind)
