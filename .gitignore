@@ -3,3 +3,4 @@ DDPG/__pycache__/*
 DDPG/__pycache__/*
 *.pvc
 test.py 
+output/*
