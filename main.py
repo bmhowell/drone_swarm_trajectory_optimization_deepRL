@@ -6,7 +6,7 @@ from gzip import READ
 from modulefinder import ReplacePackage
 import re
 from readline import replace_history_item
-from selectors import EpollSelector
+# from selectors import EpollSelector
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,16 +22,16 @@ import utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 100
-num_time_steps_per_episode = 20
+num_episodes = 1000
+num_time_steps_per_episode = 40
 batch_size = 3
 gamma = 0.95
 tau   = 0.05
 
 # -------- Environment -------- #
-num_agents = 2
+num_agents = 25
 num_obstables = 2
-num_targets = 2 
+num_targets = 100 
 
 env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
 env.reset()
@@ -42,11 +42,11 @@ test_action = np.array([-np.ones(num_agents) * .85,
 obs_t, obs_t_Plus1, reward_t, done_t = env.step(test_action) # Expecting an np array that is (num_agents, 3)
 
 # -------- Neural network parameters -------- #
-hidden_size = 256
+hidden_size = 64
 lr = 0.001
 
 # -------- Environment -------- #
-replay_buffer_max_size = 1000 
+replay_buffer_max_size = 500
 
 #%% Initialize the enviroment 
 obs_size = obs_t.size
@@ -111,6 +111,9 @@ for episode in range(num_episodes):
         # a_t = 2*np.random.random(num_agents*3)-1
 
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+        if episode == num_episodes - 1:
+            env.visualize()
+            
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
 
         if len(ReplayBuffer) > batch_size: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
@@ -199,5 +202,5 @@ plt.subplot(1,3,3)
 plt.plot(episodes, avg_episode_reward)
 plt.xlabel('Episode', fontsize=20)
 plt.ylabel('Reward', fontsize=20)
-
-plt.show()
+plt.savefig('output/results_episode{}_agents{}_targets{}.png'.format(num_episodes, num_agents, num_targets))
+# plt.show()

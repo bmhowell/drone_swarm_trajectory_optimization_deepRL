@@ -13,11 +13,6 @@ from copy import deepcopy
 from matplotlib import animation
 from matplotlib import rc
 
-"""
-    env.step(at) -> return past state
-
-"""
-
 class GameOfDronesEnv():
     
     def __init__(self, n_agents=15, n_obstacles=25, n_targets=100):
@@ -117,9 +112,9 @@ class GameOfDronesEnv():
 
         # randomly position targets throughout the domain
         self._target_position = np.empty((self.nT0, self.td_obs))
-        xT = np.random.rand(self.nT) * (2 * self.xB) - self.xB
-        yT = np.random.rand(self.nT) * (2 * self.yB) - self.yB
-        zT = np.random.rand(self.nT) * (2 * self.zB) - self.zB
+        xT = np.random.rand(self.nT0) * (2 * self.xB) - self.xB
+        yT = np.random.rand(self.nT0) * (2 * self.yB) - self.yB
+        zT = np.random.rand(self.nT0) * (2 * self.zB) - self.zB
         self._target_position[:, :3] = np.array([xT, yT, zT], dtype=np.float64).T
         self._target_position[:, 3] = True                           # one hot encoding for active
         self._target_position[:, 4] = False                          # one hot encoding for captured
@@ -161,6 +156,7 @@ class GameOfDronesEnv():
             self.aaDist[agent, agent] = np.nan
         
     def step(self, action):
+        # ensure correct shape
         if action.shape != (self.nA0, 3):
             action = action.reshape(self.nA0, 3)
         
@@ -173,14 +169,15 @@ class GameOfDronesEnv():
         #####################################################################
         
         # copy current observation
-        current_observation = np.hstack(
-                                (self._agent_state[:, :6].flatten(),            # agent positions and velocities
-                                 self._target_position[:, :3].flatten(),        # target positions
-                                 self._obstacle_position.flatten(),             # obstacle position
-                                 self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
-                                 self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
-                                 )
-                            )
+        current_observation = self.get_current_observation()
+        # current_observation = np.hstack(
+        #                         (self._agent_state[:, :6].flatten(),            # agent positions and velocities
+        #                          self._target_position[:, :3].flatten(),        # target positions
+        #                          self._obstacle_position.flatten(),             # obstacle position
+        #                          self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
+        #                          self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
+        #                          )
+        #                     )
 
         # map action to propulsion force vector --- WHAT TO DO HERE
 
@@ -188,6 +185,7 @@ class GameOfDronesEnv():
         f_prop = np.zeros((self.nA0, 3))
         action /= np.linalg.norm(action, ord=2, axis=1)[:, None]
         action *= 200
+        
         
         f_prop[self.active_agents, :] = action[self.active_agents, :]
 
@@ -237,12 +235,16 @@ class GameOfDronesEnv():
         self._target_position[target_mapped, 3] = False
         self._target_position[target_mapped, 4] = True
 
-        self.nT = self.nT0 - len(target_mapped)
-        self.nM = self.nA0 - len(mCrash)
+        # print('mCrash: ', mCrash)
+        # print('self.active_agents: ', self.active_agents)
 
         # get active agents and targets
         self.active_agents = self._get_active_objects(self._agent_state)
         self.active_targets = self._get_active_objects(self._target_position)
+
+        self.nT = len(self.active_targets) #self.nT0 - len(target_mapped)
+        self.nM = len(self.active_agents) # self.nA0 - len(mCrash)
+
 
         # if all agents are lost, crashed, or eliminated, stop the simulation
         if self.nT <= 0 or self.nM <= 0 or self.counter == self.total_steps:
@@ -271,21 +273,25 @@ class GameOfDronesEnv():
         ax.scatter(self._agent_state[self.active_agents, 0], 
                    self._agent_state[self.active_agents, 1], 
                    self._agent_state[self.active_agents, 2], 
-                   color='r')
+                   color='r', label='agents')
 
         ax.scatter(self._target_position[self.active_targets, 0], 
                    self._target_position[self.active_targets, 1], 
                    self._target_position[self.active_targets, 2], 
-                   color='g')
+                   color='g', label='targets')
 
-        ax.scatter(self._obstacle_position[:, 0], self._obstacle_position[:, 1], self._obstacle_position[:, 2], color='k')
+        ax.scatter(self._obstacle_position[:, 0], self._obstacle_position[:, 1], self._obstacle_position[:, 2], color='k', label='obstacles')
 
         ax.set_xlabel('X (m)')
         ax.set_ylabel('Y (m)')
         ax.set_zlabel('Z (m)')
-        ax.view_init(elev=70., azim=40)
-        ax.legend(['Obstacles', 'Targets', 'Agents'])
-        plt.show()
+        ax.set_ylim([-160, 160])
+        ax.set_xlim([-60, 155])
+        ax.set_zlim([-10, 10])
+        ax.view_init(elev=35., azim=40)
+        # plt.show()
+        plt.savefig('output/drone_{}.png'.format(self.counter))
+        plt.close()
 
 
 if __name__ == "__main__":
@@ -312,7 +318,7 @@ if __name__ == "__main__":
         print('reward: ', reward)
         print('done: ', done)
         print('')
-        # env.visualize()
+        env.visualize()
         counter += 1
     
     # print('\nafter: \n', env.get_current_state()[:, :3])
