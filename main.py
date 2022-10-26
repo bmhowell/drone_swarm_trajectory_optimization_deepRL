@@ -2,6 +2,8 @@
 # -------- General -------- #
 
 # -------- PyTorch -------- #
+from modulefinder import ReplacePackage
+from readline import replace_history_item
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,7 +20,7 @@ from DDPG.ReplayBuffer import *
 # -------- Training -------- #
 num_episodes = 10
 num_time_steps_per_episode = 50
-
+batch_size = 10
 
 # -------- Environment -------- #
 num_agents = 2
@@ -38,6 +40,9 @@ obs_t, obs_t_Plus1, reward_t, done_t = env.step(test_action) # Expecting an np a
 hidden_size = 256
 lr = 0.001
 
+# -------- Environment -------- #
+replay_buffer_max_size = 1000 
+
 #%% Initialize the enviroment 
 obs_size = obs_t.size
 
@@ -55,7 +60,8 @@ for target_param, param in zip(actor_target.parameters(), actor.parameters()):
 for target_param, param in zip(critic_target.parameters(), critic.parameters()):
     target_param.data.copy_(param.data)
 
-#%% Initiliaze 
+#%% Initiliaze the Replay Buffer 
+ReplayBuffer = Memory(replay_buffer_max_size)
 
 #%% Main training loop 
 
@@ -66,6 +72,7 @@ for epsisode in range(num_episodes):
 
     for t in range(num_time_steps_per_episode):
         a_t = actor.forward(obs_t)
+        
 
 
 
