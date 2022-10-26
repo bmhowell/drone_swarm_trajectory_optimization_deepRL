@@ -22,7 +22,7 @@ import utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 10
+num_episodes = 100
 num_time_steps_per_episode = 20
 batch_size = 3
 gamma = 0.95
@@ -161,9 +161,10 @@ for episode in range(num_episodes):
 
             # ------ Finally, we can perform a soft update on the target networks ------ #
             for target_param, param in zip(actor_target.parameters(), actor.parameters()):
-                target_param.data.copy_(param.data)
+                target_param.data.copy_(param.data * tau + target_param.data * (1.0 - tau))
+        
             for target_param, param in zip(critic_target.parameters(), critic.parameters()):
-                target_param.data.copy_(param.data)
+                target_param.data.copy_(param.data * tau + target_param.data * (1.0 - tau))
 
             # ------ Save the rewards, the critic losses, and the actor losses ------ #
             critic_losses[t] = critic_loss
