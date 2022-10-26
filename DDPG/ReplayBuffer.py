@@ -27,6 +27,12 @@ class Memory:
             reward_batch.append(reward)
             done_batch.append(done)
         
+        state_batch = np.array(state_batch) 
+        next_state_batch = np.array(next_state_batch) 
+        action_batch = np.array(action_batch) 
+        reward_batch = np.array(reward_batch) 
+        done_batch = np.array(done_batch)[:,None]
+        
         return state_batch, next_state_batch, action_batch, reward_batch, done_batch
 
     def __len__(self):
