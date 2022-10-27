@@ -35,4 +35,11 @@ class Actor(nn.Module):
         x = F.relu(self.linear2(x))
         x = self.linear3(x)
 
+        # if x.size() != (int(torch.numel(x) / 3), 3):
+        #     action = x.reshape(int(torch.numel(x)/3), 3)
+        #     action /= torch.linalg.norm(action, ord=2, axis=1)[:, None]
+        #     # action *= 200
+        #     action = action.reshape(int(torch.numel(x)))
+        #     print('action.shape: ', action.shape)
+
         return x
