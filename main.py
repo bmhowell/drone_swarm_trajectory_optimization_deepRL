@@ -17,16 +17,18 @@ import utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 1000
-num_time_steps_per_episode = 40
+num_episodes = 100
+num_time_steps_per_episode = 100
 batch_size = 100
 gamma = 0.95
 tau   = 0.05
+num_actor_gradient_steps = 10
+num_critic_gradient_steps = 10
 
 # -------- Environment -------- #
 num_agents = 15
-num_obstables = 2
-num_targets = 100 
+num_obstables = 3
+num_targets = 100
 
 env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
 env.reset()
@@ -79,6 +81,8 @@ avg_critic_loss     = np.zeros((num_episodes))
 avg_actor_loss      = np.zeros((num_episodes))
 avg_episode_reward  = np.zeros((num_episodes))
 
+plot_reward = []
+
 for episode in range(num_episodes):
 
     # Resent the environment for each episode
@@ -109,6 +113,7 @@ for episode in range(num_episodes):
 
         if episode == num_episodes - 1:
             env.visualize()
+            plot_reward.append(reward_t)
             
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
 
@@ -130,34 +135,40 @@ for episode in range(num_episodes):
             done_t_B = utils.from_numpy(done_t_B)
 
             # ------ 1.) Update the critic ------ #
-            # Get current Q-estimates
-            Q_t_B = critic.forward(obs_t_B,a_t_B)
-            # Use actor to predict next action given next states
-            a_t_plus1_B = actor_target.forward(obs_t_Plus1_B)
-            # Define the target Q's given the reward and the discounted next Q's
-            target_Qs = reward_t_B + gamma * critic_target.forward(obs_t_Plus1_B, a_t_plus1_B) * (1-done_t_B)
-            # NOTE: Regarding the line above. There is a predicted Q value for every action. But there is only one reward for each group of actions. 
-            # Assert that shapes of the estimated Q's and the target Q's are the same 
-            assert Q_t_B.size() == target_Qs.size()
-            # Feed the estimate Q values and target Q values
-            critic_loss          = critic_loss_function(Q_t_B, target_Qs)
-            # Zero out the gradients and take a step of gradient descent
-            critic_optimizer.zero_grad()
-            critic_loss.backward()
-            critic_optimizer.step()
+            for _ in range(num_critic_gradient_steps):
+                # Get current Q-estimates
+                Q_t_B = critic.forward(obs_t_B,a_t_B)
+                # Use actor to predict next action given next states
+                a_t_plus1_B = actor_target.forward(obs_t_Plus1_B)
+                # Define the target Q's given the reward and the discounted next Q's
+                target_Qs = reward_t_B # + gamma * critic_target.forward(obs_t_Plus1_B, a_t_plus1_B) * (1-done_t_B)
+                # NOTE: Regarding the line above. There is a predicted Q value for every action. But there is only one reward for each group of actions. 
+                # Assert that shapes of the estimated Q's and the target Q's are the same 
+                assert Q_t_B.size() == target_Qs.size()
+                # Feed the estimate Q values and target Q values
+                critic_loss          = critic_loss_function(Q_t_B, target_Qs)
+                # Zero out the gradients and take a step of gradient descent
+                critic_optimizer.zero_grad()
+                critic_loss.backward()
+                critic_optimizer.step()
+
+                print(critic_loss)
 
             # ------ 2.) Update the actor ------ #
-            # Use your latest actor to predict which action to take 
-            a_t_B = actor.forward(obs_t_B)
-            # Get current Q-estimates
-            Q_t_B = critic.forward(obs_t_B,a_t_B)
-            # For the actor, we simply wish to maximize the average Q
-            # Therefore, we can define our actor loss function as 
-            actor_loss = -1 * torch.mean(Q_t_B)
-            # Zero out the gradients and take a step of gradient descent 
-            actor_optimizer.zero_grad()
-            actor_loss.backward()
-            actor_optimizer.step()
+            for _ in range(num_actor_gradient_steps):
+                # Use your latest actor to predict which action to take 
+                a_t_B = actor.forward(obs_t_B)
+                # Get current Q-estimates
+                Q_t_B = critic.forward(obs_t_B,a_t_B)
+                # For the actor, we simply wish to maximize the average Q
+                # Therefore, we can define our actor loss function as 
+                actor_loss = -1 * torch.mean(Q_t_B)
+                # Zero out the gradients and take a step of gradient descent 
+                actor_optimizer.zero_grad()
+                actor_loss.backward()
+                actor_optimizer.step()
+
+                # print(actor_loss)
 
             # ------ Finally, we can perform a soft update on the target networks ------ #
             for target_param, param in zip(actor_target.parameters(), actor.parameters()):
@@ -172,9 +183,10 @@ for episode in range(num_episodes):
             rewards[t]       = reward_t
 
             if done_t is True:
+                print('broken')
                 break
 
-    print(a_t)
+    # print(a_t)
     avg_critic_loss[episode]    = np.mean(critic_losses)
     avg_actor_loss[episode]     = np.mean(actor_losses)
     avg_episode_reward[episode] = np.mean(rewards)
@@ -205,3 +217,7 @@ plt.xlabel('Episode', fontsize=20)
 plt.ylabel('Reward', fontsize=20)
 plt.savefig('output/results_episode{}_agents{}_targets{}.png'.format(num_episodes, num_agents, num_targets))
 # plt.show()
+
+plt.figure()
+plt.plot(np.arange(0, len(plot_reward), 1), plot_reward)
+plt.show()
