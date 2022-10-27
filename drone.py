@@ -254,7 +254,14 @@ class GameOfDronesEnv():
         n_crashed_drones = np.sum(self._agent_state[:, 7])
         # print('n_crashed_drones: ', n_crashed_drones)
         # reward = n_mapped_targets / self.nT0 - n_crashed_drones / self.nA0 
-        reward = reward_nT + reward_nA
+        # reward = reward_nT - reward_nA
+        largest_possible_dist_at = np.sqrt((2*self.xMax)**2 + (2*self.yMax)**2 + (2*self.zMax)**2)
+        # print(self.atDist)
+        # print(self.atDist.shape)
+        reward = (- np.sum(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
+                  + largest_possible_dist_at * (n_mapped_targets / self.nT0) 
+                  - largest_possible_dist_at * (n_crashed_drones / self.nA0) ) 
+        # print(reward)
 
         next_observation = np.hstack(
                                 (self._agent_state[:, :6].flatten(),            # agent positions and velocities
