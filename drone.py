@@ -245,7 +245,7 @@ class GameOfDronesEnv():
         self.nM = len(self.active_agents) # self.nA0 - len(mCrash)
 
         # if all agents are lost, crashed, or eliminated, stop the simulation
-        if self.nT <= 0 or self.nA <= 0 or self.counter == self.total_steps:
+        if self.nT <= 0 or self.nM <= 0 or self.counter == self.total_steps:
             self.done = True
 
         # compute reward - ** CONSIDER ADDING TIME
