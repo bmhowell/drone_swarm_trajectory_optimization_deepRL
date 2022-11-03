@@ -5,6 +5,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 # -------- Scripts -------- #
 from DDPG.networks import * 
@@ -17,7 +18,7 @@ import utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 10
+num_episodes = 1000
 num_time_steps_per_episode = 100
 batch_size = 2
 gamma = 0.95
@@ -27,29 +28,23 @@ num_critic_gradient_steps = 100
 
 # -------- Environment -------- #
 num_agents = 1
-num_obstables = 0
+num_obstables = 1
 num_targets = 1
 
 env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
-env.reset()
-test_action = np.array([-np.ones(num_agents) * .85, 
-                        np.zeros(num_agents), 
-                        -np.ones(num_agents) * .15]).T * 200
-
-obs_t, obs_t_Plus1, reward_t, done_t = env.step(test_action) # Expecting an np array that is (num_agents, 3)
 
 # -------- Neural network parameters -------- #
 hidden_size = 64
 lr_critic = 0.01
 lr_actor = 0.01
 
-# -------- Environment -------- #
-replay_buffer_max_size = 500
+# -------- ReplayBuffer -------- #
+replay_buffer_max_size = 1000000
 
 #%% Initialize the enviroment 
-obs_size = obs_t.size
+obs_size = int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 
-act_size = test_action.size                   # x,y,z directions of the propulsion force for each agent  
+act_size = num_agents * 3                   # x,y,z directions of the propulsion force for each agent  
 
 #%% Initialize the actor, critic, and target networks 
 actor = Actor(obs_size, hidden_size, act_size)
@@ -99,12 +94,10 @@ for episode in range(num_episodes):
 
         # Find out where you currently are 
         obs_t = env.get_current_observation()
-
         # env.visualize()
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
-
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
         # a_t = test_action.flatten()

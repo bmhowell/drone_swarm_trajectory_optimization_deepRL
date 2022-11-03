@@ -1,4 +1,5 @@
 import torch 
+import torch.nn.functional as F
 import numpy as np 
 
 class OUNoise(object):
@@ -36,3 +37,24 @@ def to_numpy(mat):
 
 def reshape_action(action):
     return action.reshape(action.size/3,3)
+
+def pt_normalize_actions(action):
+
+    if action.dim() == 1: # There is only one dimension if the input is not batched. 
+        num_agents = int(len(action)/3)
+        action_mat = action.reshape(num_agents, 3)
+        action_normalized = F.normalize(action_mat, p=2, dim=1)
+        action = action_normalized.reshape(num_agents*3)
+
+    elif action.dim() == 2: # There are two dimensions if the input is batched, in which case action.shape = [batch_size, num_agents*3]
+        batch_size = action.shape[0]
+        num_agents = int(action.shape[1]/3)
+
+        action_mat = action.reshape(batch_size, num_agents, 3)
+        action_normalized = F.normalize(action_mat, p=2, dim=2)
+        action = action_normalized.reshape(batch_size, num_agents*3)
+
+    else:
+        raise Exception("the shape of your action is larger than 2!")
+
+    return action

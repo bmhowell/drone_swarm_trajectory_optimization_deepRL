@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from utils import pt_normalize_actions
 
 class Critic(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -35,16 +36,6 @@ class Actor(nn.Module):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
         x = self.linear3(x)
-
-        batch_size = state.shape[0]
-        num_agents = int(self.output_size/3)
-
-        if x.dim() == 1: # There is only one dimension if the input is not batched. 
-            pass
-        elif x.dim() == 2: # There are two dimensions if the input is batched, in which case x.shape = [batch_size, num_agents*3]
-            action_mat = x.reshape(batch_size, num_agents, 3)
-            action_normalized = F.normalize(action_mat, p=2, dim=2)
-            # action *= 200
-            x = action_normalized.reshape(batch_size, num_agents*3)
+        x = pt_normalize_actions(x)
 
         return x
