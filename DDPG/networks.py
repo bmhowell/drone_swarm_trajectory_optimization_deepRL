@@ -44,9 +44,6 @@ class Actor(nn.Module):
         elif x.dim() == 2: # There are two dimensions if the input is batched, in which case x.shape = [batch_size, num_agents*3]
             action_mat = x.reshape(batch_size, num_agents, 3)
             action_normalized = F.normalize(action_mat, p=2, dim=2)
-            print('neural network action')
-            print(action_normalized)
-            print(action_normalized.shape)
             # action *= 200
             x = action_normalized.reshape(batch_size, num_agents*3)
 

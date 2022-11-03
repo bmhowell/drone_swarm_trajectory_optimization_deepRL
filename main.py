@@ -99,7 +99,6 @@ for episode in range(num_episodes):
 
         # Find out where you currently are 
         obs_t = env.get_current_observation()
-        print(obs_t)
 
         # env.visualize()
         
@@ -111,7 +110,6 @@ for episode in range(num_episodes):
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
-        print(obs_t)
 
         if episode == num_episodes - 1:
             env.visualize()
@@ -124,9 +122,6 @@ for episode in range(num_episodes):
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
             
-            print(obs_t_B)
-            assert obs_t_B.shape[0] ==1 
-
             # Note regarding the batching. PyTorch is set up such that the first dimension is the batch dimension.
             # Therefore, if batch_size = 3 and obs_size = 32
             # obs_t_B.size() = torch.size([3, 32])
@@ -183,9 +178,9 @@ for episode in range(num_episodes):
             actor_losses[t]  = actor_loss
             rewards[t]       = reward_t
 
-            if done_t is True:
-                print('broken')
-                break
+        if done_t is True:
+            print('Episode done')
+            break
 
     # print(a_t)
     avg_critic_loss[episode]    = np.mean(critic_losses)
