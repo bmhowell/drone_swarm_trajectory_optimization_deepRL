@@ -44,7 +44,7 @@ replay_buffer_max_size = 1000000
 #%% Initialize the enviroment 
 obs_size = int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 
-act_size = num_agents * 3                   # x,y,z directions of the propulsion force for each agent  
+act_size = num_agents * 3 # x,y,z directions of the propulsion force for each agent  
 
 #%% Initialize the actor, critic, and target networks 
 actor = Actor(obs_size, hidden_size, act_size)
@@ -66,8 +66,16 @@ for target_param, param in zip(actor_target.parameters(), actor.parameters()):
 for target_param, param in zip(critic_target.parameters(), critic.parameters()):
     target_param.data.copy_(param.data)
 
-#%% Initiliaze the Replay Buffer 
+#%% Initialize the Replay Buffer 
 ReplayBuffer = Memory(replay_buffer_max_size)
+
+#%% Initialize the noise model
+mu = 0.0
+theta = 0.15
+max_sigma = 0.3
+min_sigma = 0.3 
+decay_period = 100000
+noise_model = utils.OUNoise(act_size, mu, theta, max_sigma, min_sigma, decay_period)
 
 #%% Main training loop 
 
@@ -77,6 +85,8 @@ avg_actor_loss      = np.zeros((num_episodes))
 avg_episode_reward  = np.zeros((num_episodes))
 
 plot_reward = []
+
+env_step = 0
 
 for episode in range(num_episodes):
 
@@ -98,11 +108,13 @@ for episode in range(num_episodes):
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
+        a_t = noise_model.get_action(a_t, env_step)
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+        env_step += 1
 
         if episode == num_episodes - 1:
             env.visualize()
@@ -110,7 +122,7 @@ for episode in range(num_episodes):
             
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
 
-        if len(ReplayBuffer) > batch_size: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
+        if len(ReplayBuffer) > 1000: # batch_size: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
 
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
