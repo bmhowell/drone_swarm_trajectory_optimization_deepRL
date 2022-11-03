@@ -238,7 +238,6 @@ class GameOfDronesEnv():
         self.active_agents = self._get_active_objects(self._agent_state)
         self.active_targets = self._get_active_objects(self._target_position)
 
-
         reward_nT = len(self.active_targets) - self.nT
         reward_nA = len(self.active_agents) - self.nA
 

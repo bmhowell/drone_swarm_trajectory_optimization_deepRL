@@ -17,18 +17,18 @@ import utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 100
+num_episodes = 10
 num_time_steps_per_episode = 100
-batch_size = 100
+batch_size = 2
 gamma = 0.95
 tau   = 0.05
-num_actor_gradient_steps = 10
-num_critic_gradient_steps = 10
+num_actor_gradient_steps = 100
+num_critic_gradient_steps = 100
 
 # -------- Environment -------- #
-num_agents = 15
-num_obstables = 3
-num_targets = 100
+num_agents = 1
+num_obstables = 0
+num_targets = 1
 
 env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
 env.reset()
@@ -99,6 +99,7 @@ for episode in range(num_episodes):
 
         # Find out where you currently are 
         obs_t = env.get_current_observation()
+        print(obs_t)
 
         # env.visualize()
         
@@ -110,6 +111,7 @@ for episode in range(num_episodes):
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+        print(obs_t)
 
         if episode == num_episodes - 1:
             env.visualize()
@@ -122,6 +124,9 @@ for episode in range(num_episodes):
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
             
+            print(obs_t_B)
+            assert obs_t_B.shape[0] ==1 
+
             # Note regarding the batching. PyTorch is set up such that the first dimension is the batch dimension.
             # Therefore, if batch_size = 3 and obs_size = 32
             # obs_t_B.size() = torch.size([3, 32])
@@ -146,13 +151,11 @@ for episode in range(num_episodes):
                 # Assert that shapes of the estimated Q's and the target Q's are the same 
                 assert Q_t_B.size() == target_Qs.size()
                 # Feed the estimate Q values and target Q values
-                critic_loss          = critic_loss_function(Q_t_B, target_Qs)
+                critic_loss = critic_loss_function(Q_t_B, target_Qs)
                 # Zero out the gradients and take a step of gradient descent
                 critic_optimizer.zero_grad()
                 critic_loss.backward()
                 critic_optimizer.step()
-
-                print(critic_loss)
 
             # ------ 2.) Update the actor ------ #
             for _ in range(num_actor_gradient_steps):
@@ -167,8 +170,6 @@ for episode in range(num_episodes):
                 actor_optimizer.zero_grad()
                 actor_loss.backward()
                 actor_optimizer.step()
-
-                # print(actor_loss)
 
             # ------ Finally, we can perform a soft update on the target networks ------ #
             for target_param, param in zip(actor_target.parameters(), actor.parameters()):
