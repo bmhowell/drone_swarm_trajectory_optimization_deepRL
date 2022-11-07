@@ -4,3 +4,4 @@ DDPG/__pycache__/*
 *.pvc
 test.py 
 output/*
+runs/*
