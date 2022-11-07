@@ -101,13 +101,13 @@ avg_episode_reward  = np.zeros((num_episodes))
 plot_reward = []
 
 num_env_step = 0
+final_env_stepper = 0
 
 for episode in range(num_episodes):
 
     # Resent the environment for each episode
     print("Episode #%d" % episode)
     env.reset(seed=1) # Or alternatively env.reset(seed=episode)
-    # env.visualize()
 
     # Allocate memory for saving variables throughout each episode
     critic_losses = np.zeros((num_time_steps_per_episode))
@@ -118,7 +118,6 @@ for episode in range(num_episodes):
 
         # Find out where you currently are 
         obs_t = env.get_current_observation()
-        # env.visualize()
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
@@ -132,7 +131,8 @@ for episode in range(num_episodes):
 
         if episode == num_episodes - 1:
             env.visualize(savePath=tensorboardPath)
-            writer.add_scalar('final_episode_reward',reward_t)
+            writer.add_scalar('final_episode_reward',reward_t, final_env_stepper)
+            final_env_stepper += 1
             
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
 
