@@ -1,5 +1,7 @@
 #%% Imports
 # -------- General -------- #
+import os 
+from datetime import datetime 
 
 # -------- PyTorch -------- #
 import torch
@@ -18,20 +20,21 @@ import utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 1000
+num_episodes = 50
 num_time_steps_per_episode = 100
 batch_size = 2
 gamma = 0.95
 tau   = 0.05
-num_actor_gradient_steps = 100
-num_critic_gradient_steps = 100
+num_actor_gradient_steps = 10
+num_critic_gradient_steps = 10
 
 # -------- Environment -------- #
 num_agents = 1
 num_obstables = 1
 num_targets = 1
 
-env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
+obs_size = int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+act_size = num_agents * 3 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
 hidden_size = 64
@@ -41,10 +44,26 @@ lr_actor = 0.01
 # -------- ReplayBuffer -------- #
 replay_buffer_max_size = 1000000
 
-#%% Initialize the enviroment 
-obs_size = int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+# -------- Noise -------- #
+mu = 0.0
+theta = 0.15
+max_sigma = 0.3
+min_sigma = 0.3 
+decay_period = 100000
 
-act_size = num_agents * 3 # x,y,z directions of the propulsion force for each agent  
+# -------- Logging -------- #
+logdir = 'runs'
+exp_name = 'testingOutTensorboard'
+now = datetime.now()
+savePath = exp_name + '_' + now.strftime("%Y_%m_%d-%H_%M_%S")
+tensorboardPath = os.path.join(logdir, savePath)
+writer = SummaryWriter(tensorboardPath)
+
+#%% Package all of the inputs into a dictionary and save it to tensorboardPath
+config = {'num_episodes':num_episodes, }
+
+#%% Initialize the enviroment 
+env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
 
 #%% Initialize the actor, critic, and target networks 
 actor = Actor(obs_size, hidden_size, act_size)
@@ -70,11 +89,6 @@ for target_param, param in zip(critic_target.parameters(), critic.parameters()):
 ReplayBuffer = Memory(replay_buffer_max_size)
 
 #%% Initialize the noise model
-mu = 0.0
-theta = 0.15
-max_sigma = 0.3
-min_sigma = 0.3 
-decay_period = 100000
 noise_model = utils.OUNoise(act_size, mu, theta, max_sigma, min_sigma, decay_period)
 
 #%% Main training loop 
@@ -86,7 +100,7 @@ avg_episode_reward  = np.zeros((num_episodes))
 
 plot_reward = []
 
-env_step = 0
+num_env_step = 0
 
 for episode in range(num_episodes):
 
@@ -108,25 +122,25 @@ for episode in range(num_episodes):
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
-        a_t = noise_model.get_action(a_t, env_step)
+        a_t = noise_model.get_action(a_t, num_env_step)
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
-        env_step += 1
+        num_env_step += 1
 
         if episode == num_episodes - 1:
-            env.visualize()
-            plot_reward.append(reward_t)
+            env.visualize(savePath=tensorboardPath)
+            writer.add_scalar('final_episode_reward',reward_t)
             
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
 
-        if len(ReplayBuffer) > 1000: # batch_size: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
+        if len(ReplayBuffer) > 10: # batch_size: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
 
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
-            
+
             # Note regarding the batching. PyTorch is set up such that the first dimension is the batch dimension.
             # Therefore, if batch_size = 3 and obs_size = 32
             # obs_t_B.size() = torch.size([3, 32])
@@ -146,7 +160,7 @@ for episode in range(num_episodes):
                 # Use actor to predict next action given next states
                 a_t_plus1_B = actor_target.forward(obs_t_Plus1_B)
                 # Define the target Q's given the reward and the discounted next Q's
-                target_Qs = reward_t_B # + gamma * critic_target.forward(obs_t_Plus1_B, a_t_plus1_B) * (1-done_t_B)
+                target_Qs = reward_t_B + gamma * critic_target.forward(obs_t_Plus1_B, a_t_plus1_B) * (1-done_t_B)
                 # NOTE: Regarding the line above. There is a predicted Q value for every action. But there is only one reward for each group of actions. 
                 # Assert that shapes of the estimated Q's and the target Q's are the same 
                 assert Q_t_B.size() == target_Qs.size()
@@ -183,42 +197,15 @@ for episode in range(num_episodes):
             actor_losses[t]  = actor_loss
             rewards[t]       = reward_t
 
+        # Save variables to tensorboard
+        writer.add_scalar('noise_decay',(num_env_step/decay_period), num_env_step)
+
         if done_t is True:
             print('Episode done')
             break
 
-    # print(a_t)
-    avg_critic_loss[episode]    = np.mean(critic_losses)
-    avg_actor_loss[episode]     = np.mean(actor_losses)
-    avg_episode_reward[episode] = np.mean(rewards)
+    writer.add_scalar('avg_critic_loss_per_episode', np.mean(critic_losses), episode)
+    writer.add_scalar('avg_actor_loss_per_episode', np.mean(actor_losses), episode)
+    writer.add_scalar('avg_reward_per_episode', np.mean(rewards), episode)
 
-
-#%% Plot results 
-import matplotlib.pyplot as plt
-
-# Episodes 
-episodes = np.arange(num_episodes)
-
-# Create a figure with three subpanels
-plt.figure(figsize=(20,5))
-plt.subplot(1,3,1)
-plt.plot(episodes, avg_critic_loss,'g')
-plt.yscale('log')
-plt.xlabel('Episode', fontsize=20)
-plt.ylabel('Critic Loss', fontsize=20)
-
-plt.subplot(1,3,2)
-plt.plot(episodes, avg_actor_loss, 'r')
-plt.xlabel('Episode', fontsize=20)
-plt.ylabel('Actor Loss', fontsize=20)
-
-plt.subplot(1,3,3)
-plt.plot(episodes, avg_episode_reward)
-plt.xlabel('Episode', fontsize=20)
-plt.ylabel('Reward', fontsize=20)
-plt.savefig('output/results_episode{}_agents{}_targets{}.png'.format(num_episodes, num_agents, num_targets))
-# plt.show()
-
-plt.figure()
-plt.plot(np.arange(0, len(plot_reward), 1), plot_reward)
-plt.show()
+writer.close()
