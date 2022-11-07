@@ -4,7 +4,7 @@ deep rl environment for game of drones
 author: bhowell@berkeley.edu
 date: 10/22
 """
-
+import os
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -273,7 +273,7 @@ class GameOfDronesEnv():
 
         return current_observation, next_observation, reward, self.done
     
-    def visualize(self):
+    def visualize(self, savePath='output'):
         print('-- plotting configuration --')
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -297,7 +297,8 @@ class GameOfDronesEnv():
         ax.set_zlim([-10, 10])
         ax.view_init(elev=35., azim=40)
         # plt.show()
-        plt.savefig('output/drone_{}.png'.format(self.counter))
+        plt_savePath = os.path.join( savePath, 'drone_{}.png'.format(self.counter) )
+        plt.savefig(plt_savePath)
         plt.close()
 
 
