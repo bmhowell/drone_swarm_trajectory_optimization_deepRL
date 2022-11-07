@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from DDPG.networks import * 
 from drone import * 
 from DDPG.ReplayBuffer import * 
-import utils
+import DDPG.utils as utils
 
 #%% Inputs 
 # ----------- NOTE: Change this section to use such that it may be ----------- #
@@ -60,7 +60,7 @@ tensorboardPath = os.path.join(logdir, savePath)
 writer = SummaryWriter(tensorboardPath)
 
 #%% Package all of the inputs into a dictionary and save it to tensorboardPath
-config = {'num_episodes':num_episodes, }
+config = {'num_episodes':num_episodes, } # TODO: Finish this dictionary or just implement argparse
 
 #%% Initialize the enviroment 
 env = GameOfDronesEnv(num_agents, num_obstables, num_targets)

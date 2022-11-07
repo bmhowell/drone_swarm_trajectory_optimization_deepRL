@@ -3,7 +3,7 @@ import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
 from networks import *
-from utils import *
+from DDPG.utils import *
 
 class DDPGagent:
     def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=50000):
