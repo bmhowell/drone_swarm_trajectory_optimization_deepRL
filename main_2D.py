@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # -------- Scripts -------- #
 from DDPG.networks import * 
-from drone_2D_RDH import * 
+from drone_2D import * 
 from DDPG.ReplayBuffer import * 
 import DDPG.utils as utils
 
@@ -30,9 +30,9 @@ num_critic_gradient_steps = 10
 update_a_and_c_every_x_episodes = 1
 
 # -------- Environment -------- #
-num_agents = 1
+num_agents = 2
 num_obstables = 0
-num_targets = 1
+num_targets = 2
 
 obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
@@ -131,15 +131,10 @@ for episode in range(num_episodes):
 
         # Find out where you currently are 
         obs_t = env.get_current_observation()
-        print(obs_t)
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
-        print('--before--')
-        print(a_t)
-        a_t = noise_model.get_action(a_t, num_env_step)
-        print('--after--')
-        print(a_t)
+        a_t = noise_model.get_action(a_t, num_env_step) # Add noise to the action
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
         # a_t = test_action.flatten()

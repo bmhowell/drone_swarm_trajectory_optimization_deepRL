@@ -250,9 +250,16 @@ class GameOfDronesEnv():
         largest_possible_dist_at = np.sqrt((2*self.xMax)**2 + (2*self.yMax)**2)
         # print(self.atDist)
         # print(self.atDist.shape)
-        reward = (- np.sum(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
+        print(self.active_agents)
+        print(self.active_targets)
+        print(self.atDist)
+        if len(self.active_targets) > 0:
+            reward = (- np.sum(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
                   + largest_possible_dist_at * (n_mapped_targets / self.nT0) 
                   - largest_possible_dist_at * (n_crashed_drones / self.nA0) ) 
+        else:
+            reward = 1000
+
         # print(reward)
 
         next_observation = np.hstack(
@@ -318,16 +325,4 @@ if __name__ == "__main__":
     # print('\nafter: \n', env.get_current_state()[:, :3])
     env.visualize()
     print('DONE')
-
-
-    
-
-
-
-    
-
-
-
-
-        
 
