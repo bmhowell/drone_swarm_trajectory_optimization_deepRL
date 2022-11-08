@@ -27,7 +27,7 @@ class OUNoise(object):
         self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
         pt_ou_state = from_numpy(ou_state)
         noisy_action = action + pt_ou_state
-        return pt_normalize_actions(noisy_action)
+        return pt_normalize_actions_2D(noisy_action)
 
 def from_numpy(mat):
     return torch.from_numpy(mat).float()
@@ -53,6 +53,27 @@ def pt_normalize_actions(action):
         action_mat = action.reshape(batch_size, num_agents, 3)
         action_normalized = F.normalize(action_mat, p=2, dim=2)
         action = action_normalized.reshape(batch_size, num_agents*3)
+
+    else:
+        raise Exception("the shape of your action is larger than 2!")
+
+    return action
+
+def pt_normalize_actions_2D(action):
+
+    if action.dim() == 1: # There is only one dimension if the input is not batched. 
+        num_agents = int(len(action)/2)
+        action_mat = action.reshape(num_agents, 2)
+        action_normalized = F.normalize(action_mat, p=2, dim=1)
+        action = action_normalized.reshape(num_agents*2)
+
+    elif action.dim() == 2: # There are two dimensions if the input is batched, in which case action.shape = [batch_size, num_agents*3]
+        batch_size = action.shape[0]
+        num_agents = int(action.shape[1]/2)
+
+        action_mat = action.reshape(batch_size, num_agents, 2)
+        action_normalized = F.normalize(action_mat, p=2, dim=2)
+        action = action_normalized.reshape(batch_size, num_agents*2)
 
     else:
         raise Exception("the shape of your action is larger than 2!")
