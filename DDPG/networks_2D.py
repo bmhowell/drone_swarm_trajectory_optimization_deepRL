@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from DDPG.utils import pt_normalize_actions
+from DDPG.utils import pt_normalize_actions_2D
 
 class Critic(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -36,6 +36,6 @@ class Actor(nn.Module):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
         x = self.linear3(x)
-        x = pt_normalize_actions(x)
+        x = pt_normalize_actions_2D(x)
 
         return x

@@ -250,9 +250,6 @@ class GameOfDronesEnv():
         largest_possible_dist_at = np.sqrt((2*self.xMax)**2 + (2*self.yMax)**2)
         # print(self.atDist)
         # print(self.atDist.shape)
-        print(self.active_agents)
-        print(self.active_targets)
-        print(self.atDist)
         if len(self.active_targets) > 0:
             reward = (- np.sum(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
                   + largest_possible_dist_at * (n_mapped_targets / self.nT0) 

@@ -10,8 +10,8 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 # -------- Scripts -------- #
-from DDPG.networks import * 
-from drone_RDH import * 
+from DDPG.networks_2D import * 
+from envs.drone_2D import * 
 from DDPG.ReplayBuffer import * 
 import DDPG.utils as utils
 
@@ -20,9 +20,9 @@ import DDPG.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 50
-num_time_steps_per_episode = 100
-batch_size = 2
+num_episodes = 500
+num_time_steps_per_episode = 300
+batch_size = 5000
 gamma = 0.95
 tau   = 0.05
 num_actor_gradient_steps = 10
@@ -30,12 +30,12 @@ num_critic_gradient_steps = 10
 update_a_and_c_every_x_episodes = 1
 
 # -------- Environment -------- #
-num_agents = 1
+num_agents = 2
 num_obstables = 0
-num_targets = 1
+num_targets = 2
 
-obs_size = int(num_agents*3 + num_targets*3) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
-act_size = num_agents*3 # x,y,z directions of the propulsion force for each agent  
+obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
 hidden_size = 64
@@ -46,15 +46,24 @@ lr_actor = 0.01
 replay_buffer_max_size = 1000000
 
 # -------- Noise -------- #
-mu = 0.0
-theta = 0.15
-max_sigma = 0.3
-min_sigma = 0.3 
-decay_period = 100000
+noise_toggle = "off"
+if noise_toggle is "on":
+    mu = 0.0
+    theta = 0.15
+    max_sigma = 0.3
+    min_sigma = 0.3 
+    decay_period = 100000
+elif noise_toggle is "off":
+    mu = 0.0
+    theta = 0.0
+    max_sigma = 0.0
+    min_sigma = 0.0 
+    decay_period = 1
 
 # -------- Logging -------- #
+visualizationOneInNrollouts = 50
 logdir = 'runs'
-exp_name = 'gameOfDrones'
+exp_name = '2D_gameOfDrones'
 now = datetime.now()
 savePath = exp_name + '_' + now.strftime("%Y_%m_%d-%H_%M_%S")
 tensorboardPath = os.path.join(logdir, savePath)
@@ -90,7 +99,7 @@ for target_param, param in zip(critic_target.parameters(), critic.parameters()):
 ReplayBuffer = Memory(replay_buffer_max_size)
 
 #%% Initialize the noise model
-noise_model = utils.OUNoise(act_size, mu, theta, max_sigma, min_sigma, decay_period)
+noise_model = utils.OUNoise_2D(act_size, mu, theta, max_sigma, min_sigma, decay_period)
 
 #%% Main training loop 
 
@@ -111,7 +120,7 @@ for episode in range(num_episodes):
 
     # Resent the environment for each episode
     print("Episode #%d" % episode)
-    env.reset(seed=episode) # Or alternatively env.reset(seed=episode)
+    env.reset(seed=episode, randomAgentInitialization=True, randomTargetInitialization=False) # Or alternatively env.reset(seed=episode)
 
     # Allocate memory for saving variables throughout each episode
     critic_losses = np.zeros((num_time_steps_per_episode))
@@ -125,20 +134,24 @@ for episode in range(num_episodes):
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
-        a_t = noise_model.get_action(a_t, num_env_step)
+        a_t = noise_model.get_action(a_t, num_env_step) # Add noise to the action
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
-        if t == 0: 
-            writer.add_scalar('rewards/rewards_all_episodes',t, num_env_step)
-        else:
-            writer.add_scalar('rewards/rewards_all_episodes',reward_t, num_env_step)
         num_env_step += 1
 
+        # Visualize one in every n rollouts
+        if episode % visualizationOneInNrollouts == 0:
+            if t == 0:
+                print("Visualizing episode #%d" % episode)
+            visualizationPath = os.path.join(tensorboardPath,'episode{}'.format(episode))
+            if not os.path.exists(visualizationPath):
+                os.makedirs(visualizationPath)
+            env.visualize(savePath=visualizationPath)
+
         if episode == num_episodes - 1:
-            env.visualize(savePath=tensorboardPath)
             writer.add_scalar('rewards/final_episode_reward',reward_t, final_env_stepper)
             final_env_stepper += 1
             
