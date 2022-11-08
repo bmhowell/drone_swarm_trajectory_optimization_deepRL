@@ -47,13 +47,13 @@ replay_buffer_max_size = 1000000
 
 # -------- Noise -------- #
 noise_toggle = "off"
-if noise_toggle is "on":
+if noise_toggle == "on":
     mu = 0.0
     theta = 0.15
     max_sigma = 0.3
     min_sigma = 0.3 
     decay_period = 100000
-elif noise_toggle is "off":
+elif noise_toggle == "off":
     mu = 0.0
     theta = 0.0
     max_sigma = 0.0
