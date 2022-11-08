@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # -------- Scripts -------- #
 from DDPG.networks import * 
-from drone import * 
+from drone_RDH import * 
 from DDPG.ReplayBuffer import * 
 import DDPG.utils as utils
 
@@ -27,14 +27,15 @@ gamma = 0.95
 tau   = 0.05
 num_actor_gradient_steps = 10
 num_critic_gradient_steps = 10
+update_a_and_c_every_x_episodes = 1
 
 # -------- Environment -------- #
 num_agents = 1
-num_obstables = 1
+num_obstables = 0
 num_targets = 1
 
-obs_size = int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
-act_size = num_agents * 3 # x,y,z directions of the propulsion force for each agent  
+obs_size = int(num_agents*3 + num_targets*3) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+act_size = num_agents*3 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
 hidden_size = 64
@@ -53,7 +54,7 @@ decay_period = 100000
 
 # -------- Logging -------- #
 logdir = 'runs'
-exp_name = 'testingOutTensorboard'
+exp_name = 'gameOfDrones'
 now = datetime.now()
 savePath = exp_name + '_' + now.strftime("%Y_%m_%d-%H_%M_%S")
 tensorboardPath = os.path.join(logdir, savePath)
@@ -98,7 +99,10 @@ avg_critic_loss     = np.zeros((num_episodes))
 avg_actor_loss      = np.zeros((num_episodes))
 avg_episode_reward  = np.zeros((num_episodes))
 
-plot_reward = []
+reward_dict = {}
+reward_dict_keys = []
+for episode in range(num_episodes):
+    reward_dict_keys.append('episode{}'.format(episode))
 
 num_env_step = 0
 final_env_stepper = 0
@@ -107,7 +111,7 @@ for episode in range(num_episodes):
 
     # Resent the environment for each episode
     print("Episode #%d" % episode)
-    env.reset(seed=1) # Or alternatively env.reset(seed=episode)
+    env.reset(seed=episode) # Or alternatively env.reset(seed=episode)
 
     # Allocate memory for saving variables throughout each episode
     critic_losses = np.zeros((num_time_steps_per_episode))
@@ -127,16 +131,21 @@ for episode in range(num_episodes):
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+        if t == 0: 
+            writer.add_scalar('rewards/rewards_all_episodes',t, num_env_step)
+        else:
+            writer.add_scalar('rewards/rewards_all_episodes',reward_t, num_env_step)
         num_env_step += 1
 
         if episode == num_episodes - 1:
             env.visualize(savePath=tensorboardPath)
-            writer.add_scalar('final_episode_reward',reward_t, final_env_stepper)
+            writer.add_scalar('rewards/final_episode_reward',reward_t, final_env_stepper)
             final_env_stepper += 1
             
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
+        writer.add_scalar('debug/ReplayBufferSize', len(ReplayBuffer), num_env_step)
 
-        if len(ReplayBuffer) > 10: # batch_size: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
+        if len(ReplayBuffer) > batch_size and episode % update_a_and_c_every_x_episodes == 0: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
 
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
@@ -198,14 +207,16 @@ for episode in range(num_episodes):
             rewards[t]       = reward_t
 
         # Save variables to tensorboard
-        writer.add_scalar('noise_decay',(num_env_step/decay_period), num_env_step)
+        writer.add_scalar('debug/noise_decay',(num_env_step/decay_period), num_env_step)
 
         if done_t is True:
+            writer.add_scalar('debug/rollout_length', t, episode)
             print('Episode done')
             break
-
-    writer.add_scalar('avg_critic_loss_per_episode', np.mean(critic_losses), episode)
-    writer.add_scalar('avg_actor_loss_per_episode', np.mean(actor_losses), episode)
-    writer.add_scalar('avg_reward_per_episode', np.mean(rewards), episode)
+    
+    if len(ReplayBuffer) > batch_size and episode % update_a_and_c_every_x_episodes == 0:
+        writer.add_scalar('losses/avg_critic_loss_per_episode', np.mean(critic_losses), episode)
+        writer.add_scalar('losses/avg_actor_loss_per_episode', np.mean(actor_losses), episode)
+        writer.add_scalar('rewards/avg_reward_per_episode', np.mean(rewards), episode)
 
 writer.close()
