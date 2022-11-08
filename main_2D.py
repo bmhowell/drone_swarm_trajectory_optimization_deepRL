@@ -20,9 +20,9 @@ import DDPG.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 50
-num_time_steps_per_episode = 100
-batch_size = 2
+num_episodes = 500
+num_time_steps_per_episode = 300
+batch_size = 5000
 gamma = 0.95
 tau   = 0.05
 num_actor_gradient_steps = 10
@@ -46,13 +46,22 @@ lr_actor = 0.01
 replay_buffer_max_size = 1000000
 
 # -------- Noise -------- #
-mu = 0.0
-theta = 0.15
-max_sigma = 0.3
-min_sigma = 0.3 
-decay_period = 100000
+noise_toggle = "off"
+if noise_toggle is "on":
+    mu = 0.0
+    theta = 0.15
+    max_sigma = 0.3
+    min_sigma = 0.3 
+    decay_period = 100000
+elif noise_toggle is "off":
+    mu = 0.0
+    theta = 0.0
+    max_sigma = 0.0
+    min_sigma = 0.0 
+    decay_period = 1
 
 # -------- Logging -------- #
+visualizationOneInNrollouts = 50
 logdir = 'runs'
 exp_name = '2D_gameOfDrones'
 now = datetime.now()
@@ -111,7 +120,7 @@ for episode in range(num_episodes):
 
     # Resent the environment for each episode
     print("Episode #%d" % episode)
-    env.reset(seed=episode) # Or alternatively env.reset(seed=episode)
+    env.reset(seed=episode, randomAgentInitialization=True, randomTargetInitialization=False) # Or alternatively env.reset(seed=episode)
 
     # Allocate memory for saving variables throughout each episode
     critic_losses = np.zeros((num_time_steps_per_episode))
@@ -122,26 +131,28 @@ for episode in range(num_episodes):
 
         # Find out where you currently are 
         obs_t = env.get_current_observation()
+        print(obs_t)
         
         # Use the actor to predict an action from the current state
         a_t = actor.forward(utils.from_numpy(obs_t)) # the actor's forward pass needs a torch.Tensor
+        print('--before--')
+        print(a_t)
         a_t = noise_model.get_action(a_t, num_env_step)
+        print('--after--')
+        print(a_t)
         # Convert action to numpy array 
         a_t = utils.to_numpy(a_t)
         # a_t = test_action.flatten()
         # a_t = 2*np.random.random(num_agents*3)-1
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
-        if t == 0: 
-            writer.add_scalar('rewards/rewards_all_episodes',t, num_env_step)
-        else:
-            writer.add_scalar('rewards/rewards_all_episodes',reward_t, num_env_step)
         num_env_step += 1
 
-        # Visualize every rollout
-        visualizationPath = os.path.join(tensorboardPath,'episode{}'.format(episode))
-        if not os.path.exists(visualizationPath):
-            os.makedirs(visualizationPath)
-        env.visualize(savePath=visualizationPath)
+        # Visualize one in every n rollouts
+        if episode % visualizationOneInNrollouts == 0:
+            visualizationPath = os.path.join(tensorboardPath,'episode{}'.format(episode))
+            if not os.path.exists(visualizationPath):
+                os.makedirs(visualizationPath)
+            env.visualize(savePath=visualizationPath)
 
         if episode == num_episodes - 1:
             writer.add_scalar('rewards/final_episode_reward',reward_t, final_env_stepper)
