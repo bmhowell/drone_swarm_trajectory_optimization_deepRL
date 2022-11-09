@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 # -------- Scripts -------- #
 from DDPG.networks import * 
 from envs.drone import * 
-from DDPG.ReplayBuffer import * 
-import DDPG.utils as utils
+from infrastructure.ReplayBuffer import * 
+import infrastructure.utils as utils
 
 #%% Inputs 
 # ----------- NOTE: Change this section to use such that it may be ----------- #
