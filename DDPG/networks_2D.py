@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from DDPG.utils import pt_normalize_actions_2D
+from infrastructure.utils import pt_normalize_actions_2D
 
 class Critic(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
