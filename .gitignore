@@ -4,5 +4,7 @@ DDPG/__pycache__/*
 *.pvc
 test.py 
 output/*
+output/.DS_Store
 runs/*
+save_runs/*
 buffers/*
