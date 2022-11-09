@@ -24,8 +24,8 @@ import infrastructure.utils as utils
 # -------- Training -------- #
 num_episodes = 10
 num_time_steps_per_episode = 300
-num_epochs = 1000
-batch_size = 1000
+num_epochs = 10000
+batch_size = 5000
 gamma = 0.95
 tau   = 0.05
 num_actor_gradient_steps = 100
@@ -45,7 +45,7 @@ lr_critic = 0.01
 lr_actor = 0.01
 
 # -------- ReplayBuffer -------- #
-replay_buffer_max_size = 2000 
+replay_buffer_max_size = 50000 
 create_replay_buffer = True
 replay_buffer_name = "replay_buffer_2D_{}agent_{}obs_{}target_size{}.pkl".format(num_agents, num_obstables, num_targets, replay_buffer_max_size)
 if not os.path.exists("buffers"):
