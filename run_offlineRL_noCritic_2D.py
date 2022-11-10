@@ -16,6 +16,7 @@ from OfflineRL.InteractiveReplayBuffer import *
 from envs.drone_2D import * 
 from infrastructure.ReplayBuffer import * 
 import infrastructure.utils as utils
+from OfflineRL.compute import *
 
 #%% Inputs 
 # ----------- NOTE: Change this section to use such that it may be ----------- #
@@ -25,24 +26,24 @@ import infrastructure.utils as utils
 num_episodes = 10
 num_time_steps_per_episode = 300
 num_epochs = 1000
-batch_size = 5
+batch_size = 100
 gamma = 0.95
 tau   = 0.05
-num_actor_gradient_steps = 10
-num_critic_gradient_steps = 10
+num_actor_gradient_steps = 100
+num_critic_gradient_steps = 100
 
 # -------- Environment -------- #
-num_agents = 2
-num_obstables = 0
-num_targets = 2
+num_agents = 5
+num_obstables = 1
+num_targets = 5
 
-obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+obs_size = int(num_agents*2 + num_obstables*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
 hidden_size = 256
-lr_critic = 0.01
-lr_actor = 0.01
+lr_critic = 0.001
+lr_actor = 0.001
 
 # -------- ReplayBuffer -------- #
 replay_buffer_max_size = 2500 
@@ -148,7 +149,6 @@ else:
     ReplayBuffer.loadBuffer(path2replay_buffer)
 
 #%% Perform offline RL on the replay buffer
-
 print("Performing offline RL on the replay buffer...")
 
 # For each epoch
@@ -159,7 +159,7 @@ for epoch in range(num_epochs):
     # Sample a batch from the ReplayBuffer
     obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
 
-    # Note regarding the batching. PyTorch is set up such that the first dimension is the batch dimension.
+    # NOTE regarding the batching. PyTorch is set up such that the first dimension is the batch dimension.
     # Therefore, if batch_size = 3 and obs_size = 32
     # obs_t_B.size() = torch.size([3, 32])
 
@@ -176,26 +176,9 @@ for epoch in range(num_epochs):
     for t in range(num_actor_gradient_steps):
         # Use your latest actor to predict which action to take 
         a_t_B = actor.forward(obs_t_B)
-        # print(obs_t_B)
-        # print(obs_t_B.shape)
-        # print(a_t_B)
-        # print(a_t_B.shape)
-        # # Get current Q-estimates
-        # Q_t_B = critic.forward(obs_t_B,a_t_B)
-        # For the actor, we simply wish to maximize the average Q
-        # Therefore, we can define our actor loss function as 
-        # actor_loss = -1 * torch.mean(reward_t_B) # -1 * torch.mean(Q_t_B)
-        batch_size = obs_t_B.shape[0]
-        obs_mat = obs_t_B.reshape(batch_size, num_agents+num_obstables+num_targets, 2)
-        opt_dir = obs_mat[:,-num_targets:,:] - obs_mat[:,:num_agents,:]
-        # print(obs_t_B)
-        # print(opt_dir.shape)
-        # print(opt_dir)
-        opt_dir = F.normalize(opt_dir, p=2, dim=2)
-        opt_dir = opt_dir.reshape(batch_size, -1)
-        # print(opt_dir)
-        # print(opt_dir.shape)
-
+        # Calculate the optimal action using optimal action function 
+        opt_dir = compute_optimal_directions_2D(obs_t_B, num_agents, num_obstables, num_targets)
+        # Calculate the loss
         assert opt_dir.size() == a_t_B.size()
         actor_loss = actor_loss_function(a_t_B, opt_dir)
         # Zero out the gradients and take a step of gradient descent 
@@ -212,7 +195,7 @@ for epoch in range(num_epochs):
     writer.add_scalar('losses/avg_actor_per_epoch', np.mean(avg_actor_loss), epoch)
 
 #%% Now that the actor and critic have been trained, let's apply them to new environments 
-print('Training complete. Now testing the trained actor and critic on new environments')
+print('Training complete. Now testing the trained actor on new environments')
 for episode in range(num_episodes):
     # Reset the environment for each episode
     print("Episode #%d" % episode)
