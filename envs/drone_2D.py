@@ -65,8 +65,8 @@ class GameOfDronesEnv():
     def get_current_observation(self):
         current_observation = np.hstack(
                                 (self._agent_state[:, :2].flatten(),            # agent positions and velocities
+                                 self._obstacle_position.flatten(),             # obstacle position
                                  self._target_position[:, :2].flatten(),        # target positions
-                                #  self._obstacle_position.flatten(),             # obstacle position
                                 #  self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
                                 #  self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
                                  )
@@ -261,8 +261,8 @@ class GameOfDronesEnv():
 
         next_observation = np.hstack(
                                 (self._agent_state[:, :2].flatten(),            # agent positions and velocities
+                                 self._obstacle_position.flatten(),             # obstacle position
                                  self._target_position[:, :2].flatten(),        # target positions
-                                #  self._obstacle_position.flatten(),             # obstacle position
                                 #  self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
                                 #  self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
                                  )
