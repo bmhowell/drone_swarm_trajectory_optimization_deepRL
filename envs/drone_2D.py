@@ -111,8 +111,8 @@ class GameOfDronesEnv():
         # randomly position targets throughout the domain
         self._target_position = np.empty((self.nT0, self.td_obs))
         if randomTargetInitialization is not True:
-            xT = np.linspace(-self.xMax + 0.05 * self.xMax, self.xMax - 0.05 * self.xMax, self.nT)
-            yT = (self.yMax - 0.05 * self.yMax) * np.ones(self.nT)
+            xT = np.linspace(-0.8*(self.xMax), 0.8*(self.xMax), self.nT)
+            yT = np.linspace(0,0,self.nT)
         elif randomTargetInitialization is True: 
             xT = np.random.rand(self.nT0) * (2 * self.xB) - self.xB
             yT = np.random.rand(self.nT0) * (2 * self.yB) - self.yB
@@ -210,8 +210,8 @@ class GameOfDronesEnv():
         aaHit = np.where(self.aaDist[self.active_agents] < self.crash_range)[0]
 
         # check for lost agents
-        xLost = np.where(np.abs(self._agent_state[self.active_agents, 0]) > self.xMax)[0]
-        yLost = np.where(np.abs(self._agent_state[self.active_agents, 1]) > self.yMax)[0]
+        xLost = np.where(np.abs(self._agent_state[:, 0]) > self.xMax)[0]
+        yLost = np.where(np.abs(self._agent_state[:, 1]) > self.yMax)[0]
 
         # return i indices of lost drones
         aLost = np.unique(np.hstack([xLost, yLost]))
@@ -232,13 +232,13 @@ class GameOfDronesEnv():
         self.active_agents = self._get_active_objects(self._agent_state)
         self.active_targets = self._get_active_objects(self._target_position)
 
-        self.nT = len(self.active_targets) #self.nT0 - len(target_mapped)
-        self.nM = len(self.active_agents) # self.nA0 - len(mCrash)
+        self.nT = len(self.active_targets) # self.nT0 - len(target_mapped)
+        self.nA = len(self.active_agents)  # self.nA0 - len(mCrash)
 
         # if all agents are lost, crashed, or eliminated, stop the simulation
         if self.nT <= 0: 
             print('Target found!')
-        if self.nT <= 0 or self.nM <= 0 or self.counter == self.total_steps:
+        if self.nT <= 0 or self.nA <= 0 or self.counter == self.total_steps:
             self.done = True
 
         # compute reward - ** CONSIDER ADDING TIME
