@@ -1,6 +1,7 @@
 import random
 from collections import deque
 import numpy as np
+import pickle
 
 class Memory:
     def __init__(self, max_size):
@@ -37,3 +38,9 @@ class Memory:
 
     def __len__(self):
         return len(self.buffer)
+
+    def saveBuffer(self, path):
+        pickle.dump(self.buffer, open(path, "wb"))
+
+    def loadBuffer(self, path):
+        self.buffer = pickle.load(open(path, "rb"))
