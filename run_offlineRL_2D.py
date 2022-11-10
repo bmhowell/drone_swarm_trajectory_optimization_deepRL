@@ -28,8 +28,8 @@ num_epochs = 10000
 batch_size = 5000
 gamma = 0.95
 tau   = 0.05
-num_actor_gradient_steps = 100
-num_critic_gradient_steps = 100
+num_actor_gradient_steps = 10
+num_critic_gradient_steps = 10
 
 # -------- Environment -------- #
 num_agents = 1
@@ -140,7 +140,7 @@ noise_model = utils.OUNoise_2D(act_size, mu, theta, max_sigma, min_sigma, decay_
 if create_replay_buffer:
     # Create the replay buffer
     print("Creating the replay buffer...")
-    ReplayBuffer = createReplayBuffer(ReplayBuffer, env, actor, noise_model, writer, config, randomAgentInit=False, randomTargetInit=True)
+    ReplayBuffer = createReplayBuffer(ReplayBuffer, env, actor, noise_model, writer, config, randomAgentInit=True, randomTargetInit=False)
 else: 
     # Load the replay buffer
     print("Loading the replay buffer...")

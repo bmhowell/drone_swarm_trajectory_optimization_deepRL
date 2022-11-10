@@ -24,21 +24,21 @@ num_episodes = 10
 num_time_steps_per_episode = 300
 
 # -------- Environment -------- #
-num_agents = 1
+num_agents = 2
 num_obstables = 0
-num_targets = 1
+num_targets = 2
 
 obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
-path2actor = "save_runs/2D_offlineRL_gameOfDrones_2022_11_09-00_16_18/actor.pth"
+path2actor = "runs/2D_offlineRL_gameOfDrones_2022_11_09-16_35_08/actor.pth"
 hidden_size = 256
 
 # -------- Logging -------- #
 visualizationOneInNrollouts = 1
 logdir = 'runs'
-exp_name = '2D_testing_offlineRL'
+exp_name = '2D_testing_offlineRL_before'
 now = datetime.now()
 savePath = exp_name + '_' + now.strftime("%Y_%m_%d-%H_%M_%S")
 tensorboardPath = os.path.join(logdir, savePath)
