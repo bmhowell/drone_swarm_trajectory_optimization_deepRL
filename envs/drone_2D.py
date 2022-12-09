@@ -66,11 +66,12 @@ class GameOfDronesEnv():
 
     def get_current_observation(self):
         current_observation = np.hstack(
-                                (self._agent_state[:, :2].flatten(),            # agent positions and velocities
+                                (self._agent_state[:, :2].flatten(),            # agent positions and velocities #12-8-22 this is actually only positions
+                                 self._agent_state[:, 2:4].flatten(),           # 12-8-22: adding agent velocities
                                  self._obstacle_position.flatten(),             # obstacle position
                                  self._target_position[:, :2].flatten(),        # target positions
-#                                  self._agent_state[:, 4:6].flatten(),           # one hot enoded crash or not crash
-#                                  self._target_position[:, 2:4].flatten()        # one hot encoded active or not active
+                                 self._agent_state[:, 4:6].flatten(),           # one hot enoded crash or not crash
+                                 self._target_position[:, 2:4].flatten()        # one hot encoded active or not active
                                  )
         ) / self.xMax
         return current_observation 
@@ -255,6 +256,11 @@ class GameOfDronesEnv():
         # print(self.atDist)
         # print(self.atDist.shape)
         if len(self.active_targets) > 0:
+#            print('self.atDist',self.atDist)
+#            print('\n\n\n')
+#            print(self.atDist[self.active_agents, :][:, self.active_targets])
+#            print('\n\n\n')
+#            print(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
             reward = (- np.sum(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
                   + largest_possible_dist_at * (n_mapped_targets)
                   - largest_possible_dist_at * (n_crashed_drones) )
@@ -279,7 +285,7 @@ class GameOfDronesEnv():
     
     def visualize(self, savePath='output'):
         fig = plt.figure(figsize=(4,8))
-        ax = fig.add_subplot(311)
+        ax = fig.add_subplot(211)
         ax.scatter(self._agent_state[self.active_agents, 0],
                    self._agent_state[self.active_agents, 1],
                    color='r', label='agents')
@@ -301,12 +307,13 @@ class GameOfDronesEnv():
         ax.set_ylim([-200, 200])
         ax.set_xlim([-200, 200])
 #
-#        #adding subplot to display atDist
+##        #adding subplot to display atDist
 #        ax1 = fig.add_subplot(312)
 ##        ax1.matshow(self.atDist)
 ##        for (i, j), z in np.ndenumerate(self.atDist):
 ##            ax1.text(j, i, '{:0.1f}'.format(z), ha='center', va='center')
-#        current_obs = np.reshape(self.get_current_observation(),(12,1))
+#
+#        current_obs = np.reshape(self.get_current_observation(),(36,1))
 #
 ##        ax1.matshow(self.get_current_observation())
 #        ax1.text(0,0,np.array2string(current_obs))
@@ -314,7 +321,7 @@ class GameOfDronesEnv():
 ##            ax1.text(j, 0, '{:0.1f}'.format(z), ha='center', va='center')
 #
         #plot reward
-        ax2 = fig.add_subplot(313)
+        ax2 = fig.add_subplot(212)
         ax2.plot(self.reward)
 #
         plt_savePath = os.path.join( savePath, 'drone_{}.png'.format(self.counter) )

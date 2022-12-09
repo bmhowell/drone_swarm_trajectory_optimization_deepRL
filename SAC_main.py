@@ -67,7 +67,8 @@ num_obstacles = 0
 num_targets = 1
 
 #obs_size = int(num_agents*2 + num_targets*2 + num_obstacles*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
-obs_size = 2*int(num_agents*2 + num_targets*2 + num_obstacles*2) # if you include one hot encoding in obs
+#obs_size = 2*int(num_agents*2 + num_targets*2 + num_obstacles*2) # if you include one hot encoding in obs
+obs_size = 2*int(num_agents*3 + num_targets*2 + num_obstacles*2) # if you include one hot encoding and velocities in obs
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent
 #%% Initialize the enviroment
 env = GameOfDronesEnv(num_agents, num_obstacles*2, num_targets)
@@ -181,7 +182,7 @@ for i_episode in itertools.count(1):
         print("Test Episodes: {}, Avg. Reward: {}".format(episodes, round(avg_reward, 2)))
         print("----------------------------------------")
 
-    if i_episode % 1 == 0 and args.video is True:
+    if i_episode % 500 == 0 and args.video is True:
         env.reset()
         state = env.get_current_observation()
         done = False

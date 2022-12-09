@@ -73,6 +73,7 @@ class SAC(object):
 
         self.critic_optim.zero_grad()
         qf_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm = 1) #MH 12-7-22
         self.critic_optim.step()
 
         pi, log_pi, _ = self.policy.sample(state_batch)
