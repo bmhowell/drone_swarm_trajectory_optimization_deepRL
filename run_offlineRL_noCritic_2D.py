@@ -26,16 +26,16 @@ from OfflineRL.compute import *
 num_episodes = 10
 num_time_steps_per_episode = 300
 num_epochs = 1000
-batch_size = 100
+batch_size = 5000
 gamma = 0.95
 tau   = 0.05
 num_actor_gradient_steps = 100
 num_critic_gradient_steps = 100
 
 # -------- Environment -------- #
-num_agents = 5
+num_agents = 2
 num_obstables = 1
-num_targets = 5
+num_targets = 2
 
 obs_size = int(num_agents*2 + num_obstables*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
@@ -46,7 +46,7 @@ lr_critic = 0.001
 lr_actor = 0.001
 
 # -------- ReplayBuffer -------- #
-replay_buffer_max_size = 2500 
+replay_buffer_max_size = 50000 
 create_replay_buffer = True
 replay_buffer_name = "replay_buffer_2D_{}agent_{}obs_{}target_size{}.pkl".format(num_agents, num_obstables, num_targets, replay_buffer_max_size)
 if not os.path.exists("buffers"):
