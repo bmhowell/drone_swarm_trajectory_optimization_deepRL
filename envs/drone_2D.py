@@ -42,7 +42,7 @@ class GameOfDronesEnv():
         # observation dimensions
         self.ad_obs = 6                                     # |   none  | SCALAR - observation dimension of agents
         self.td_obs = 4                                     # |   none  | SCALAR - observation dimension of obstacles
-        self.od_obs = 3                                     # |   none  | SCALAR - observation dimension of targets
+        self.od_obs = 3                                     # |   none  | SCALAR - observation dimension of targets #targets and obstacles are backwards in the comments here right??
 
         # CONSTANTS - Boundaries
         self.xB = 100                                       # |    m    | SCALAR - x boundary: target
@@ -57,6 +57,8 @@ class GameOfDronesEnv():
         self.w2 = 10                                        # Weight of time usage in net cost
         self.w3 = 20                                        # Weight of agent losses in net cost
 
+        self.reward = []                                    # adding to track reward over time for plotting
+
         # AGENTS, TARGETS, OBSTACLES
         self._agent_state = None
         self._target_velocity = None
@@ -64,11 +66,12 @@ class GameOfDronesEnv():
 
     def get_current_observation(self):
         current_observation = np.hstack(
-                                (self._agent_state[:, :2].flatten(),            # agent positions and velocities
+                                (self._agent_state[:, :2].flatten(),            # agent positions and velocities #12-8-22 this is actually only positions
+                                 self._agent_state[:, 2:4].flatten(),           # 12-8-22: adding agent velocities
                                  self._obstacle_position.flatten(),             # obstacle position
                                  self._target_position[:, :2].flatten(),        # target positions
-                                #  self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
-                                #  self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
+                                 self._agent_state[:, 4:6].flatten(),           # one hot enoded crash or not crash
+                                 self._target_position[:, 2:4].flatten()        # one hot encoded active or not active
                                  )
         ) / self.xMax
         return current_observation 
@@ -140,6 +143,8 @@ class GameOfDronesEnv():
         self.aaDist = np.empty((self.nA0, self.nA0))                 # agent to agent distance    (nA, nA)
         self.aoDist = np.empty((self.nA0, self.nO0))                 # agent to obstacle distance (nA, nO)
         
+        self.reward = []
+        
     def _get_pairwise_distances(self, active_agents: np.ndarray, active_targets: np.ndarray):
         """
             TODO
@@ -205,9 +210,9 @@ class GameOfDronesEnv():
         self._get_pairwise_distances(self.active_agents, self.active_targets)
 
         # check if agents are in the range of the targets, obstacles, agents, our boundaries
-        atHit = np.where(self.atDist[self.active_agents] < self.agent_sight)[1]
-        aoHit = np.where(self.aoDist[self.active_agents] < self.crash_range)[0]
-        aaHit = np.where(self.aaDist[self.active_agents] < self.crash_range)[0]
+        atHit = np.where(self.atDist[:] < self.agent_sight)[1]
+        aoHit = np.where(self.aoDist[:] < self.crash_range)[0]
+        aaHit = np.where(self.aaDist[:] < self.crash_range)[0]
 
         # check for lost agents
         xLost = np.where(np.abs(self._agent_state[:, 0]) > self.xMax)[0]
@@ -251,46 +256,78 @@ class GameOfDronesEnv():
         # print(self.atDist)
         # print(self.atDist.shape)
         if len(self.active_targets) > 0:
+#            print('self.atDist',self.atDist)
+#            print('\n\n\n')
+#            print(self.atDist[self.active_agents, :][:, self.active_targets])
+#            print('\n\n\n')
+#            print(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
             reward = (- np.sum(np.amin(self.atDist[self.active_agents, :][:, self.active_targets], axis=1))
-                  + largest_possible_dist_at * (n_mapped_targets / self.nT0) 
-                  - largest_possible_dist_at * (n_crashed_drones / self.nA0) ) 
+                  + largest_possible_dist_at * (n_mapped_targets)
+                  - largest_possible_dist_at * (n_crashed_drones) )
         else:
             reward = 1000
+            
+        self.reward.append(reward)
 
         # print(reward)
 
-        next_observation = np.hstack(
-                                (self._agent_state[:, :2].flatten(),            # agent positions and velocities
-                                 self._obstacle_position.flatten(),             # obstacle position
-                                 self._target_position[:, :2].flatten(),        # target positions
-                                #  self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
-                                #  self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
-                                 )
-                            ) / self.xMax
+        next_observation = self.get_current_observation()
+#        next_observation = np.hstack(
+#                                (self._agent_state[:, :2].flatten(),            # agent positions and velocities
+#                                 self._obstacle_position.flatten(),             # obstacle position
+#                                 self._target_position[:, :2].flatten(),        # target positions
+#                                #  self._agent_state[:, 6:8].flatten(),           # one hot enoded crash or not crash
+#                                #  self._target_position[:, 3:5].flatten()        # one hot encoded active or not active
+#                                 )
+#                            ) / self.xMax
 
         return current_observation, next_observation, reward, self.done
     
     def visualize(self, savePath='output'):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.scatter(self._agent_state[self.active_agents, 0], 
-                   self._agent_state[self.active_agents, 1], 
+        fig = plt.figure(figsize=(4,8))
+        ax = fig.add_subplot(211)
+        ax.scatter(self._agent_state[self.active_agents, 0],
+                   self._agent_state[self.active_agents, 1],
                    color='r', label='agents')
 
-        ax.scatter(self._target_position[self.active_targets, 0], 
-                   self._target_position[self.active_targets, 1], 
+        ax.scatter(self._target_position[self.active_targets, 0],
+                   self._target_position[self.active_targets, 1],
                    color='g', label='targets')
 
         ax.scatter(self._obstacle_position[:, 0], self._obstacle_position[:, 1], color='k', label='obstacles')
+        
+        #adding labeling of drone index on plot:
+        n = np.arange(self.nA)
+        for i, txt in enumerate(n):
+            ax.annotate(txt, (self._agent_state[self.active_agents, 0][i], self._agent_state[self.active_agents, 1][i]))
 
         ax.set_xlabel('X (m)')
         ax.set_ylabel('Y (m)')
         ax.axis('equal')
         ax.set_ylim([-200, 200])
         ax.set_xlim([-200, 200])
+#
+##        #adding subplot to display atDist
+#        ax1 = fig.add_subplot(312)
+##        ax1.matshow(self.atDist)
+##        for (i, j), z in np.ndenumerate(self.atDist):
+##            ax1.text(j, i, '{:0.1f}'.format(z), ha='center', va='center')
+#
+#        current_obs = np.reshape(self.get_current_observation(),(36,1))
+#
+##        ax1.matshow(self.get_current_observation())
+#        ax1.text(0,0,np.array2string(current_obs))
+##        for (j), z in np.ndenumerate(self.get_current_observation()):
+##            ax1.text(j, 0, '{:0.1f}'.format(z), ha='center', va='center')
+#
+        #plot reward
+        ax2 = fig.add_subplot(212)
+        ax2.plot(self.reward)
+#
         plt_savePath = os.path.join( savePath, 'drone_{}.png'.format(self.counter) )
         plt.savefig(plt_savePath)
         plt.close()
+
 
 
 if __name__ == "__main__":

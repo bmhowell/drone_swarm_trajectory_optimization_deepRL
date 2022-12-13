@@ -18,7 +18,7 @@ eventsFile      = glob.glob(path2eventsFile)[0]
 print('file',eventsFile)
 
 #eventsFile = "runs/2022-11-09_15-22-12_SAC_HalfCheetah-v2_Gaussian_autotune/events*"
-eventsFile = glob.glob("runs/2022-11-09_16-14-53_SAC_HalfCheetah-v2_Gaussian_autotune/events.out.*")[0]
+eventsFile = glob.glob("runs/2022-12-08_12-53-22_SAC_HalfCheetah-v2_Gaussian_autotune/events.out.*")[0]
 
 def get_tf_results(file, tagName):
     """
@@ -34,7 +34,8 @@ def get_tf_results(file, tagName):
 
 avg_critic_loss_per_episode1 = get_tf_results(eventsFile, 'loss/critic_1')
 avg_critic_loss_per_episode2 = get_tf_results(eventsFile, 'loss/critic_2')
-avg_actor_loss_per_episode = get_tf_results(eventsFile, 'loss/entropy_loss')
+#avg_actor_loss_per_episode = get_tf_results(eventsFile, 'loss/entropy_loss') #why am i plotting entropy loss as actor loss? shouldn't this be policy loss??
+avg_actor_loss_per_episode = get_tf_results(eventsFile, 'loss/policy') #why am i plotting entropy loss as actor loss? shouldn't this be policy loss??
 avg_reward_per_episode = get_tf_results(eventsFile, 'avg_reward/test')
 
 
