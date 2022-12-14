@@ -185,12 +185,12 @@ for i_episode in itertools.count(1):
         state = next_state
 
 #if want to break by number of steps run:
-    if args.cut_off_param = 'Steps':
+    if args.cut_off_param == 'Steps':
         if total_numsteps > args.num_steps:
             break
 
 #if want to break based on number of episodes run:
-    elif args.cut_off_param = 'Episodes':
+    elif args.cut_off_param =='Episodes':
         if i_episode > args.num_eps:
             break
 
