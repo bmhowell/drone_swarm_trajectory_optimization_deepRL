@@ -247,8 +247,9 @@ class GameOfDronesEnv():
         # if all agents are lost, crashed, or eliminated, stop the simulation
         if self.nT <= 0: 
             self.target_found = True
+            self.done = True
             print('Target found!')
-        if self.nT <= 0 or self.nA <= 0 or self.counter == self.total_steps:
+        if self.nT > 0 or self.nA <= 0 or self.counter == self.total_steps:
             self.target_found = False
             self.done = True
 
