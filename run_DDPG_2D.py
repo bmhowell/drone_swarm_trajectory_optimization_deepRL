@@ -20,25 +20,25 @@ import infrastructure.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 500
+num_episodes = 10000
 num_time_steps_per_episode = 300
-batch_size = 5000
+batch_size = 10000
 gamma = 0.95
 tau   = 0.05
-num_actor_gradient_steps = 10
-num_critic_gradient_steps = 10
+num_actor_gradient_steps = 1
+num_critic_gradient_steps = 1
 update_a_and_c_every_x_episodes = 1
 
 # -------- Environment -------- #
 num_agents = 2
 num_obstables = 0
-num_targets = 2
+num_targets = 1
 
-obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+obs_size = int(num_agents*2*3 + num_obstables * 3 + num_targets * 4)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
-hidden_size = 64
+hidden_size = 256
 lr_critic = 0.01
 lr_actor = 0.01
 
@@ -120,7 +120,7 @@ for episode in range(num_episodes):
 
     # Resent the environment for each episode
     print("Episode #%d" % episode)
-    env.reset(seed=episode, randomAgentInitialization=True, randomTargetInitialization=False) # Or alternatively env.reset(seed=episode)
+    env.reset(seed=episode, randomAgentInitialization=True, randomTargetInitialization=True) # Or alternatively env.reset(seed=episode)
 
     # Allocate memory for saving variables throughout each episode
     critic_losses = np.zeros((num_time_steps_per_episode))
