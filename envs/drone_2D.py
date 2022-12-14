@@ -92,6 +92,10 @@ class GameOfDronesEnv():
 
     def reset(self, seed=None, randomAgentInitialization=True, randomTargetInitialization=True):
 
+        # Reset the number of targets and number of agents
+        self.nA = self.nA0
+        self.nT = self.nT0
+
         # housekeeping
         if seed != None:
             np.random.seed(seed)
@@ -114,9 +118,9 @@ class GameOfDronesEnv():
         # randomly position targets throughout the domain
         self._target_position = np.empty((self.nT0, self.td_obs))
         if randomTargetInitialization is not True:
-            xT = np.linspace(-0.8*(self.xMax), 0.8*(self.xMax), self.nT)
-            yT = np.linspace(0,0,self.nT)
-        elif randomTargetInitialization is True: 
+            xT = np.linspace(-0.8*(self.xMax), 0.8*(self.xMax), self.nT0)
+            yT = np.linspace(0,0,self.nT0)
+        else: 
             xT = np.random.rand(self.nT0) * (2 * self.xB) - self.xB
             yT = np.random.rand(self.nT0) * (2 * self.yB) - self.yB
         self._target_position[:, :2] = np.array([xT, yT], dtype=np.float64).T
