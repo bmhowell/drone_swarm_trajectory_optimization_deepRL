@@ -24,21 +24,21 @@ num_episodes = 10
 num_time_steps_per_episode = 300
 
 # -------- Environment -------- #
-num_agents = 1
+num_agents = 2
 num_obstables = 0
 num_targets = 1
 
-obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+obs_size = int(num_agents*2*3 + num_obstables * 3 + num_targets * 4)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
-path2actor = "runs/2D_offlineRL_gameOfDrones_2022_11_09-16_35_08/actor.pth"
+path2actor = "/home/rdhuff/Desktop/drone_swarm_trajectory_optimization_deepRL/runs/2D_gameOfDrones_2022_12_13-20_00_25/episode10000/actor.pth"
 hidden_size = 256
 
 # -------- Logging -------- #
 visualizationOneInNrollouts = 1
 logdir = 'runs'
-exp_name = '2D_testing_offlineRL_before'
+exp_name = '2D_testing_DDPG'
 now = datetime.now()
 savePath = exp_name + '_' + now.strftime("%Y_%m_%d-%H_%M_%S")
 tensorboardPath = os.path.join(logdir, savePath)
@@ -49,7 +49,6 @@ env = GameOfDronesEnv(num_agents, num_obstables, num_targets)
 
 #%% Initialize the actor and critic networks
 actor = Actor(obs_size, hidden_size, act_size)
-critic = Critic(obs_size + act_size, hidden_size, 1) # 1 output for the Q-value
 
 #%% Load the trained policy
 actor.load_state_dict(torch.load(path2actor))
@@ -60,7 +59,7 @@ for episode in range(num_episodes):
     
     # Reset the environment for each episode
     print("Episode #%d" % episode)
-    env.reset(seed=episode, randomAgentInitialization=True, randomTargetInitialization=False) # Or alternatively env.reset(seed=episode)
+    env.reset(seed=episode) # Or alternatively env.reset(seed=episode)
 
     for t in range(num_time_steps_per_episode):
 
@@ -83,6 +82,14 @@ for episode in range(num_episodes):
             env.visualize(savePath=visualizationPath)
 
         if done_t is True:
+            # Determine if the done is from a collision or a target capture
+            if env.target_found is False:
+                print('Collision')
+                writer.add_scalar('debug/collision', 1, episode)
+            else:
+                print('Target captured')
+                writer.add_scalar('debug/target_captured', 1, episode)
+
             writer.add_scalar('debug/rollout_length', t, episode)
             print('Episode done')
             break
