@@ -56,6 +56,8 @@ class GameOfDronesEnv():
         self.w1 = 70                                        # Weight of mapping in net cost
         self.w2 = 10                                        # Weight of time usage in net cost
         self.w3 = 20                                        # Weight of agent losses in net cost
+        
+        self.reward = []                                    # adding to track reward over time for plotting
 
         # AGENTS, TARGETS, OBSTACLES
         self._agent_state = None
@@ -111,8 +113,8 @@ class GameOfDronesEnv():
         # randomly position targets throughout the domain
         self._target_position = np.empty((self.nT0, self.td_obs))
         if randomTargetInitialization is not True:
-            xT = np.linspace(-self.xMax + 0.05 * self.xMax, self.xMax - 0.05 * self.xMax, self.nT)
-            yT = (self.yMax - 0.05 * self.yMax) * np.ones(self.nT)
+            xT = np.linspace(-0.8*(self.xMax), 0.8*(self.xMax), self.nT)
+            yT = np.linspace(0,0,self.nT)
         elif randomTargetInitialization is True: 
             xT = np.random.rand(self.nT0) * (2 * self.xB) - self.xB
             yT = np.random.rand(self.nT0) * (2 * self.yB) - self.yB
@@ -139,6 +141,8 @@ class GameOfDronesEnv():
         self.atDist = np.empty((self.nA0, self.nT0))                 # agent to target distance   (nA, nT)
         self.aaDist = np.empty((self.nA0, self.nA0))                 # agent to agent distance    (nA, nA)
         self.aoDist = np.empty((self.nA0, self.nO0))                 # agent to obstacle distance (nA, nO)
+        
+        self.reward = []
         
     def _get_pairwise_distances(self, active_agents: np.ndarray, active_targets: np.ndarray):
         """
@@ -205,13 +209,17 @@ class GameOfDronesEnv():
         self._get_pairwise_distances(self.active_agents, self.active_targets)
 
         # check if agents are in the range of the targets, obstacles, agents, our boundaries
-        atHit = np.where(self.atDist[self.active_agents] < self.agent_sight)[1]
-        aoHit = np.where(self.aoDist[self.active_agents] < self.crash_range)[0]
-        aaHit = np.where(self.aaDist[self.active_agents] < self.crash_range)[0]
+#        atHit = np.where(self.atDist[self.active_agents] < self.agent_sight)[1]
+#        aoHit = np.where(self.aoDist[self.active_agents] < self.crash_range)[0]
+#        aaHit = np.where(self.aaDist[self.active_agents] < self.crash_range)[0] #these have same problem as xlost and ylost did
+        
+        atHit = np.where(self.atDist[:] < self.agent_sight)[1]
+        aoHit = np.where(self.aoDist[:] < self.crash_range)[0]
+        aaHit = np.where(self.aaDist[:] < self.crash_range)[0]
 
         # check for lost agents
-        xLost = np.where(np.abs(self._agent_state[self.active_agents, 0]) > self.xMax)[0]
-        yLost = np.where(np.abs(self._agent_state[self.active_agents, 1]) > self.yMax)[0]
+        xLost = np.where(np.abs(self._agent_state[:, 0]) > self.xMax)[0]
+        yLost = np.where(np.abs(self._agent_state[:, 1]) > self.yMax)[0]
 
         # return i indices of lost drones
         aLost = np.unique(np.hstack([xLost, yLost]))
@@ -232,13 +240,13 @@ class GameOfDronesEnv():
         self.active_agents = self._get_active_objects(self._agent_state)
         self.active_targets = self._get_active_objects(self._target_position)
 
-        self.nT = len(self.active_targets) #self.nT0 - len(target_mapped)
-        self.nM = len(self.active_agents) # self.nA0 - len(mCrash)
+        self.nT = len(self.active_targets) # self.nT0 - len(target_mapped)
+        self.nA = len(self.active_agents)  # self.nA0 - len(mCrash)
 
         # if all agents are lost, crashed, or eliminated, stop the simulation
         if self.nT <= 0: 
             print('Target found!')
-        if self.nT <= 0 or self.nM <= 0 or self.counter == self.total_steps:
+        if self.nT <= 0 or self.nA <= 0 or self.counter == self.total_steps:
             self.done = True
 
         # compute reward - ** CONSIDER ADDING TIME
@@ -256,6 +264,8 @@ class GameOfDronesEnv():
                   - largest_possible_dist_at * (n_crashed_drones / self.nA0) ) 
         else:
             reward = 1000
+        
+        self.reward.append(reward)
 
         # print(reward)
 
@@ -271,8 +281,8 @@ class GameOfDronesEnv():
         return current_observation, next_observation, reward, self.done
     
     def visualize(self, savePath='output'):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        fig = plt.figure(figsize=(8,15))
+        ax = fig.add_subplot(311)
         ax.scatter(self._agent_state[self.active_agents, 0], 
                    self._agent_state[self.active_agents, 1], 
                    color='r', label='agents')
@@ -282,12 +292,27 @@ class GameOfDronesEnv():
                    color='g', label='targets')
 
         ax.scatter(self._obstacle_position[:, 0], self._obstacle_position[:, 1], color='k', label='obstacles')
+        
+        #adding for accuracy checks:
+        n = np.arange(self.nA)
+        for i, txt in enumerate(n):
+            ax.annotate(txt, (self._agent_state[self.active_agents, 0][i], self._agent_state[self.active_agents, 1][i]))
 
         ax.set_xlabel('X (m)')
         ax.set_ylabel('Y (m)')
         ax.axis('equal')
         ax.set_ylim([-200, 200])
         ax.set_xlim([-200, 200])
+        
+        #adding subplot to display atDist
+        ax1 = fig.add_subplot(312)
+        ax1.matshow(self.atDist)
+        for (i, j), z in np.ndenumerate(self.atDist):
+            ax1.text(j, i, '{:0.1f}'.format(z), ha='center', va='center')
+            
+        ax2 = fig.add_subplot(313)
+        ax2.plot(self.reward)
+        
         plt_savePath = os.path.join( savePath, 'drone_{}.png'.format(self.counter) )
         plt.savefig(plt_savePath)
         plt.close()

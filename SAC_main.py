@@ -36,12 +36,16 @@ parser.add_argument('--automatic_entropy_tuning', type=bool, default=False, meta
                     help='Automaically adjust α (default: False)')
 parser.add_argument('--seed', type=int, default=123456, metavar='N',
                     help='random seed (default: 123456)')
-parser.add_argument('--batch_size', type=int, default=256, metavar='N',
-                    help='batch size (default: 256)')
+parser.add_argument('--batch_size', type=int, default=10000, metavar='N',
+                    help='batch size (default: 10000)')
 parser.add_argument('--num_steps', type=int, default=1000001, metavar='N',
                     help='maximum number of steps (default: 1000000)')
+parser.add_argument('--num_eps', type=int, default=10000, metavar='N',
+                    help='maximum number of episodes (default: 10000)')
 parser.add_argument('--hidden_size', type=int, default=256, metavar='N',
                     help='hidden size (default: 256)')
+parser.add_argument('--steps_btwn_updates', type=int, default=100, metavar='N',
+                    help='model updates per simulator step (default: 1)')
 parser.add_argument('--updates_per_step', type=int, default=1, metavar='N',
                     help='model updates per simulator step (default: 1)')
 parser.add_argument('--start_steps', type=int, default=10000, metavar='N',
@@ -130,7 +134,7 @@ for i_episode in itertools.count(1):
     episode_steps = 0
     done = False
 #    state = env.reset()
-    env.reset()
+    env.reset(seed = i_episode)
     state = env.get_current_observation()
 
     while not done:
@@ -143,17 +147,18 @@ for i_episode in itertools.count(1):
 #        print('action',action)
         if len(memory) > args.batch_size:
             # Number of updates per step in environment
-            for i in range(args.updates_per_step):
-                # Update parameters of all the networks
-                critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, args.batch_size, updates)
+            if total_numsteps % args.steps_btwn_updates == 0:
+                for i in range(args.updates_per_step):
+                    # Update parameters of all the networks
+                    critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, args.batch_size, updates)
 
-                writer.add_scalar('loss/critic_1', critic_1_loss, updates)
-                writer.add_scalar('loss/critic_2', critic_2_loss, updates)
-                writer.add_scalar('loss/policy', policy_loss, updates)
-                writer.add_scalar('loss/entropy_loss', ent_loss, updates)
-                writer.add_scalar('entropy_temprature/alpha', alpha, updates)
-                updates += 1
-
+                    writer.add_scalar('loss/critic_1', critic_1_loss, updates)
+                    writer.add_scalar('loss/critic_2', critic_2_loss, updates)
+                    writer.add_scalar('loss/policy', policy_loss, updates)
+                    writer.add_scalar('loss/entropy_loss', ent_loss, updates)
+                    writer.add_scalar('entropy_temprature/alpha', alpha, updates)
+                    updates += 1
+                
         try: #MARK this is janky
             action = to_numpy(action)
         except:
@@ -164,6 +169,8 @@ for i_episode in itertools.count(1):
         episode_steps += 1
         total_numsteps += 1
         episode_reward += reward
+        
+        writer.add_scalar('avg_reward/train', episode_reward/episode_steps, i_episode)
 
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
@@ -175,11 +182,16 @@ for i_episode in itertools.count(1):
 
         state = next_state
 
-    if total_numsteps > args.num_steps:
+#if want to break by number of steps run:
+#    if total_numsteps > args.num_steps:
+#        break
+
+#if want to break based on number of episodes run:
+    if i_episode > args.num_eps:
         break
 
 #    print('episode_reward', episode_reward)
-    writer.add_scalar('reward/train', episode_reward, i_episode)
+#    writer.add_scalar('reward/train', episode_reward, i_episode)
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
     if i_episode % 10 == 0 and args.eval is True:
