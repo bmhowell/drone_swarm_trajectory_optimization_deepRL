@@ -29,7 +29,7 @@ class GameOfDronesEnv():
 
         # CONSTANTS - Objects and Interaction Parameters
         self.agent_sight = 5                                # |    m    | SCALAR - Target mapping distance 
-        self.crash_range = 2                                # |    m    | SCALAR - Agent collision distance
+        self.crash_range = 2                               # |    m    | SCALAR - Agent collision distance
         self.obs_distance = 25                              # |    m    | SCALAR - Observable distance
 
         self.nA0 = n_agents                                 # |   none  | SCALAR - Number of initial agents
@@ -285,6 +285,7 @@ class GameOfDronesEnv():
     
     def visualize(self, savePath='output'):
         fig = plt.figure(figsize=(4,8))
+#        fig, ax = plt.subplots(1, 2, figsize=(10,7))
         ax = fig.add_subplot(211)
         ax.scatter(self._agent_state[self.active_agents, 0],
                    self._agent_state[self.active_agents, 1],
@@ -297,9 +298,16 @@ class GameOfDronesEnv():
         ax.scatter(self._obstacle_position[:, 0], self._obstacle_position[:, 1], color='k', label='obstacles')
         
         #adding labeling of drone index on plot:
-        n = np.arange(self.nA)
-        for i, txt in enumerate(n):
-            ax.annotate(txt, (self._agent_state[self.active_agents, 0][i], self._agent_state[self.active_agents, 1][i]))
+#        n = np.arange(self.nA)
+#        for i, txt in enumerate(n):
+#            ax.annotate(txt, (self._agent_state[self.active_agents, 0][i], self._agent_state[self.active_agents, 1][i]))
+
+        #plot domain boundary:
+        
+        ax.axvline(-self.xMax, color='black', linestyle='dashed')
+        ax.axvline(self.xMax, color='black', linestyle='dashed')
+        ax.axhline(-self.yMax, color='black', linestyle='dashed')
+        ax.axhline(self.yMax, color='black', linestyle='dashed')
 
         ax.set_xlabel('X (m)')
         ax.set_ylabel('Y (m)')
@@ -323,9 +331,11 @@ class GameOfDronesEnv():
         #plot reward
         ax2 = fig.add_subplot(212)
         ax2.plot(self.reward)
+        ax2.set_xlabel('Episode Steps')
+        ax2.set_ylabel('Reward')
 #
-        plt_savePath = os.path.join( savePath, 'drone_{}.png'.format(self.counter) )
-        plt.savefig(plt_savePath)
+        plt_savePath = os.path.join( savePath, 'drone_{}.png'.format(self.counter ))
+        plt.savefig(plt_savePath, pad_inches = 2)
         plt.close()
 
 

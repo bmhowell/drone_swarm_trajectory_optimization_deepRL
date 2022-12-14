@@ -18,7 +18,7 @@ eventsFile      = glob.glob(path2eventsFile)[0]
 print('file',eventsFile)
 
 #eventsFile = "runs/2022-11-09_15-22-12_SAC_HalfCheetah-v2_Gaussian_autotune/events*"
-eventsFile = glob.glob("runs/2022-12-08_12-53-22_SAC_HalfCheetah-v2_Gaussian_autotune/events.out.*")[0]
+eventsFile = glob.glob("runs/2022-12-12_12-15-15_SAC_drone_2D_Gaussian_autotune/events.out.*")[0]
 
 def get_tf_results(file, tagName):
     """

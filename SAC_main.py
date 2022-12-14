@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from SAC.replay_memory import ReplayMemory
 import gym
 from gym import spaces
+import json
 
 from envs.drone_2D import *
 from infrastructure.utils import pt_normalize_actions_2D
@@ -16,8 +17,8 @@ from infrastructure.utils import from_numpy
 from infrastructure.utils import to_numpy
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-parser.add_argument('--env-name', default="HalfCheetah-v2",
-                    help='Mujoco Gym environment (default: HalfCheetah-v2)')
+parser.add_argument('--env-name', default="drone_2D",
+                    help='Mujoco Gym environment (default: drone_2D)')
 parser.add_argument('--policy', default="Gaussian",
                     help='Policy Type: Gaussian | Deterministic (default: Gaussian)')
 parser.add_argument('--eval', type=bool, default=True,
@@ -53,6 +54,23 @@ parser.add_argument('--cuda', action="store_true",
                     help='run on CUDA (default: False)')
 parser.add_argument('--video', type=bool, default=False,
                     help='video')
+                    
+#environment variables:
+parser.add_argument('--num_agents', type=int, default=2, metavar='N',
+                    help='number of agents/drones (default: 1)')
+parser.add_argument('--num_obstacles', type=int, default=0, metavar='N',
+                    help='number of obstacles (default: 0)')
+parser.add_argument('--num_targets', type=int, default=1, metavar='N',
+                    help='number of targets (default: 1)')
+                    
+#if starting from an existing checkpoint:
+parser.add_argument('--load_checkpoint', type=bool, default=False,
+                    help='whether it should load a checkpoint or not, default False')
+parser.add_argument('--buffer_path', default="",
+                    help='path to memory buffer checkpoint')
+parser.add_argument('--checkpoint_path', default="",
+                    help='path to model checkpoint')
+
 args = parser.parse_args()
 
 ## Environment
@@ -62,9 +80,9 @@ args = parser.parse_args()
 #env.action_space.seed(args.seed)
 
 # -------- Environment -------- #
-num_agents = 2
-num_obstacles = 0
-num_targets = 1
+num_agents = args.num_agents
+num_obstacles = args.num_obstacles
+num_targets = args.num_targets
 
 #obs_size = int(num_agents*2 + num_targets*2 + num_obstacles*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
 #obs_size = 2*int(num_agents*2 + num_targets*2 + num_obstacles*2) # if you include one hot encoding in obs
@@ -81,15 +99,27 @@ np.random.seed(args.seed)
 action_space = spaces.Box(-1*np.ones(act_size),np.ones(act_size),dtype=np.float32)
 #agent = SAC(env.observation_space.shape[0], env.action_space, args)
 agent = SAC(obs_size, action_space, args)
+if args.load_checkpoint == True:
+    agent.load_checkpoint(args.checkpoint_path, evaluate=False)
 
 #Tesnorboard
 path = 'runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), args.env_name,
                                                              args.policy, "autotune" if args.automatic_entropy_tuning else "")
+                                                             
+os.makedirs(path+'/checkpoints')
+    
 writer = SummaryWriter(path)
 print(path)
 
+with open(path+'/commandline_args.txt', 'w') as f:
+    json.dump(args.__dict__, f, indent=2)
+
 # Memory
 memory = ReplayMemory(args.replay_size, args.seed)
+if args.load_checkpoint == True:
+    memory.load_buffer(args.buffer_path)
+
+print('/n/n',len(memory),'/n/n')
 
 # Training Loop
 total_numsteps = 0
@@ -199,6 +229,13 @@ for i_episode in itertools.count(1):
             env.visualize(path+'/episode'+str(i_episode)+'/')
             state = next_state
             t += 1
+            
+        ckpt_path = path+'/checkpoints/sac_checkpoint_{}_{}'.format(args.env_name, i_episode)
+        agent.save_checkpoint(args.env_name, ckpt_path = ckpt_path) #saving model states
+        
+        ckpt_path = path+'/checkpoints/sac_buffer_{}_{}'.format(args.env_name, i_episode)
+        memory.save_buffer(args.env_name,save_path = ckpt_path) #saving buffer
+        
 #        avg_reward += episode_reward
 #    avg_reward /= episodes
 
