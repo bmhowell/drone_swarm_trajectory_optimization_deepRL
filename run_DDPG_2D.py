@@ -20,14 +20,14 @@ import infrastructure.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 10000
+num_episodes = 20000
 num_time_steps_per_episode = 300
 batch_size = 10000
 gamma = 0.95
 tau   = 0.05
-num_actor_gradient_steps = 1
-num_critic_gradient_steps = 1
-update_a_and_c_every_x_episodes = 1
+num_actor_gradient_steps = 10
+num_critic_gradient_steps = 10
+update_a_and_c_every_x_timesteps = 1000
 
 # -------- Environment -------- #
 num_agents = 2
@@ -61,13 +61,49 @@ elif noise_toggle == "off":
     decay_period = 1
 
 # -------- Logging -------- #
-visualizationOneInNrollouts = 50
+visualizationOneInNrollouts = 500
 logdir = 'runs'
 exp_name = '2D_gameOfDrones'
 now = datetime.now()
 savePath = exp_name + '_' + now.strftime("%Y_%m_%d-%H_%M_%S")
 tensorboardPath = os.path.join(logdir, savePath)
 writer = SummaryWriter(tensorboardPath)
+
+#%% Package all of the inputs into a dictionary and save it to tensorboardPath
+config =   {'num_episodes':num_episodes, 
+            'num_time_steps_per_episode': num_time_steps_per_episode,
+            'batch_size': batch_size,
+            'gamma': gamma,
+            'tau': tau,
+            'num_actor_gradient_steps': num_actor_gradient_steps,
+            'num_critic_gradient_steps': num_critic_gradient_steps,
+            'update_a_and_c_every_x_timesteps': update_a_and_c_every_x_timesteps,
+            'num_agents': num_agents,
+            'num_obstables': num_obstables,
+            'num_targets': num_targets,
+            'obs_size': obs_size,
+            'act_size': act_size,
+            'hidden_size': hidden_size,
+            'lr_critic': lr_critic,
+            'lr_actor': lr_actor,
+            'replay_buffer_max_size': replay_buffer_max_size,
+            'noise_toggle': noise_toggle,
+            'mu': mu,
+            'theta': theta,
+            'max_sigma': max_sigma,
+            'min_sigma': min_sigma,
+            'decay_period': decay_period,
+            'visualizationOneInNrollouts': visualizationOneInNrollouts,
+            'logdir': logdir,
+            'exp_name': exp_name,
+            'now': now,
+            'savePath': savePath,
+            'tensorboardPath': tensorboardPath
+          } 
+
+# Save hyperparameter configuration
+with open(tensorboardPath + '/hyperparameters.pkl', 'wb') as f:
+    pickle.dump(config, f)
 
 #%% Package all of the inputs into a dictionary and save it to tensorboardPath
 config = {'num_episodes':num_episodes, } # TODO: Finish this dictionary or just implement argparse
@@ -150,6 +186,9 @@ for episode in range(num_episodes):
             if not os.path.exists(visualizationPath):
                 os.makedirs(visualizationPath)
             env.visualize(savePath=visualizationPath)
+            # Save the models
+            torch.save(actor.state_dict(), os.path.join(visualizationPath,'actor.pth'))
+            torch.save(critic.state_dict(), os.path.join(visualizationPath,'critic.pth'))
 
         if episode == num_episodes - 1:
             writer.add_scalar('rewards/final_episode_reward',reward_t, final_env_stepper)
@@ -158,7 +197,7 @@ for episode in range(num_episodes):
         ReplayBuffer.push(obs_t, obs_t_Plus1, a_t, reward_t, done_t) # All pushed into the ReplayBuffer need to be numpy arrays
         writer.add_scalar('debug/ReplayBufferSize', len(ReplayBuffer), num_env_step)
 
-        if len(ReplayBuffer) > batch_size and episode % update_a_and_c_every_x_episodes == 0: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
+        if len(ReplayBuffer) > batch_size and len(ReplayBuffer) % update_a_and_c_every_x_timesteps == 0: # As soon as the ReplayBuffer has accumulated enough memory, perform RL
 
             # Sample a batch from the ReplayBuffer
             obs_t_B, obs_t_Plus1_B, a_t_B, reward_t_B, done_t_B = ReplayBuffer.sample(batch_size) # All pulled from the ReplayBuffer are numpy arrays
@@ -217,7 +256,7 @@ for episode in range(num_episodes):
             # ------ Save the rewards, the critic losses, and the actor losses ------ #
             critic_losses[t] = critic_loss
             actor_losses[t]  = actor_loss
-            rewards[t]       = reward_t
+        rewards[t]       = reward_t
 
         # Save variables to tensorboard
         writer.add_scalar('debug/noise_decay',(num_env_step/decay_period), num_env_step)
@@ -227,9 +266,19 @@ for episode in range(num_episodes):
             print('Episode done')
             break
     
-    if len(ReplayBuffer) > batch_size and episode % update_a_and_c_every_x_episodes == 0:
-        writer.add_scalar('losses/avg_critic_loss_per_episode', np.mean(critic_losses), episode)
-        writer.add_scalar('losses/avg_actor_loss_per_episode', np.mean(actor_losses), episode)
-        writer.add_scalar('rewards/avg_reward_per_episode', np.mean(rewards), episode)
+    # Remove zeros from the losses and rewards
+    critic_losses = critic_losses[critic_losses != 0]
+    actor_losses  = actor_losses[actor_losses != 0]
+    rewards       = rewards[rewards != 0]
+
+    if len(ReplayBuffer) > batch_size and len(ReplayBuffer) % update_a_and_c_every_x_timesteps == 0:
+        writer.add_scalar('losses/avg_critic_loss_per_episode', np.mean(critic_losses), len(ReplayBuffer))
+        writer.add_scalar('losses/avg_actor_loss_per_episode', np.mean(actor_losses), len(ReplayBuffer))
+
+    writer.add_scalar('rewards/avg_reward_per_episode', np.mean(rewards), episode)
+
+    # Save the models
+    torch.save(actor.state_dict(), os.path.join(tensorboardPath,'actor.pth'))
+    torch.save(critic.state_dict(), os.path.join(tensorboardPath,'critic.pth'))
 
 writer.close()
