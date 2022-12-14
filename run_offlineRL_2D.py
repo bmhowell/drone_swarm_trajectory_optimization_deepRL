@@ -36,7 +36,7 @@ num_agents = 1
 num_obstables = 0
 num_targets = 1
 
-obs_size = int(num_agents*2 + num_targets*2) # int(num_agents*2*3 + num_agents*2 + num_obstables * 3 + num_targets * 5)
+obs_size = int(num_agents*2*3 + num_obstables * 3 + num_targets * 4)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
