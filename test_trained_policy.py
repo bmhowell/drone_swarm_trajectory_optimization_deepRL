@@ -20,7 +20,7 @@ import infrastructure.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Testing -------- #
-num_episodes = 10
+num_episodes = 100
 num_time_steps_per_episode = 300
 
 # -------- Environment -------- #
@@ -61,6 +61,9 @@ for episode in range(num_episodes):
     print("Episode #%d" % episode)
     env.reset(seed=episode) # Or alternatively env.reset(seed=episode)
 
+    # Allocate space for the average reward
+    avg_reward = 0
+
     for t in range(num_time_steps_per_episode):
 
         # Find out where you currently are 
@@ -71,6 +74,9 @@ for episode in range(num_episodes):
         a_t = utils.to_numpy(a_t)
         # Take a step in the environment
         obs_t, obs_t_Plus1, reward_t, done_t = env.step(a_t) # the env needs a numpy array
+
+        # Update the average reward
+        avg_reward += reward_t
 
         # Visualize one in every n rollouts
         if episode % visualizationOneInNrollouts == 0:
@@ -85,11 +91,17 @@ for episode in range(num_episodes):
             # Determine if the done is from a collision or a target capture
             if env.target_found is False:
                 print('Collision')
-                writer.add_scalar('debug/collision', 1, episode)
+                writer.add_scalar('results/collision', 1, episode)
+                writer.add_scalar('results/target_captured', 0, episode)
             else:
                 print('Target captured')
-                writer.add_scalar('debug/target_captured', 1, episode)
+                writer.add_scalar('results/collision', 0, episode)
+                writer.add_scalar('results/target_captured', 1, episode)
 
-            writer.add_scalar('debug/rollout_length', t, episode)
+            # Log the average reward
+            avg_reward = avg_reward / t
+            writer.add_scalar('results/avg_reward', avg_reward, episode)
+
+            writer.add_scalar('results/rollout_length', t, episode)
             print('Episode done')
             break
