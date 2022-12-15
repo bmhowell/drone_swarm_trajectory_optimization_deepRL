@@ -9,3 +9,4 @@ runs/*
 save_runs/*
 buffers/*
 *.png
+compare_runs/*
