@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 log_dir = "runs"
 print(os.path.join(log_dir,"*"))
 path2eventsFolders = glob.glob(os.path.join(log_dir,"*"))
-path2eventsFolder = path2eventsFolders[-1]
+path2eventsFolder = path2eventsFolders[0]
 print(path2eventsFolder)
 
 #%% Read in the results 
@@ -27,30 +27,26 @@ def get_tf_results(file, tagName):
                 output.append(v.simple_value)
     return np.array(output)
 
-avg_critic_loss_per_episode = get_tf_results(eventsFile, 'avg_critic_loss_per_episode')
-avg_actor_loss_per_episode = get_tf_results(eventsFile, 'avg_actor_loss_per_episode')
-avg_reward_per_episode = get_tf_results(eventsFile, 'avg_reward_per_episode')
-
+collision_rate = get_tf_results(eventsFile, 'results/collision')
+avg_reward_per_episode = get_tf_results(eventsFile, 'results/avg_reward')
 
 #%% Plot results 
 
 # Number of episodes 
-episodes = np.arange(len(avg_actor_loss_per_episode))
-
-# Create a figure for the critic loss 
-plt.figure(figsize=(8,8))
-episodes = np.arange(len(avg_critic_loss_per_episode))
-plt.plot(episodes, avg_critic_loss_per_episode,'g')
-plt.xlabel('Episode', fontsize=20)
-plt.ylabel('Critic Loss', fontsize=20)
-plt.show()
+episodes = np.arange(len(collision_rate))
 
 # Create a figure for the actor loss 
 plt.figure(figsize=(8,8))
-plt.plot(episodes, avg_actor_loss_per_episode,'r')
+plt.plot(episodes, collision_rate,'r')
 plt.xlabel('Episode', fontsize=20)
-plt.ylabel('Actor Loss', fontsize=20)
+plt.ylabel('Collusion Toggle', fontsize=20)
 plt.show()
+
+print("Collision Rate: ")
+print(np.sum(collision_rate))
+print("Number of targets found: ")
+num_episodes = len(collision_rate)
+print(num_episodes - np.sum(collision_rate))
 
 # Create a figure for the average reward  
 plt.figure(figsize=(8,8))
