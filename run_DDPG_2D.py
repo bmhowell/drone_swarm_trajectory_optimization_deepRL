@@ -20,7 +20,7 @@ import infrastructure.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Training -------- #
-num_episodes = 20000
+num_episodes = 10000
 num_time_steps_per_episode = 300
 batch_size = 10000
 gamma = 0.95
@@ -256,6 +256,11 @@ for episode in range(num_episodes):
             # ------ Save the rewards, the critic losses, and the actor losses ------ #
             critic_losses[t] = critic_loss
             actor_losses[t]  = actor_loss
+
+            # Save variables to tensorboard
+            writer.add_scalar('losses/critic_loss', critic_loss, num_env_step)
+            writer.add_scalar('losses/actor_loss', actor_loss, num_env_step)
+
         rewards[t]       = reward_t
 
         # Save variables to tensorboard
@@ -271,8 +276,9 @@ for episode in range(num_episodes):
     actor_losses  = actor_losses[actor_losses != 0]
     rewards       = rewards[rewards != 0]
 
-    if len(ReplayBuffer) > batch_size and len(ReplayBuffer) % update_a_and_c_every_x_timesteps == 0:
+    if np.mean(critic_losses) is not np.nan:
         writer.add_scalar('losses/avg_critic_loss_per_episode', np.mean(critic_losses), len(ReplayBuffer))
+    if np.mean(actor_losses) is not np.nan:
         writer.add_scalar('losses/avg_actor_loss_per_episode', np.mean(actor_losses), len(ReplayBuffer))
 
     writer.add_scalar('rewards/avg_reward_per_episode', np.mean(rewards), episode)
