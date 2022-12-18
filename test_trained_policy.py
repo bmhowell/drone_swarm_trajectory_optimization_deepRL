@@ -2,7 +2,6 @@
 # -------- General -------- #
 import os 
 from datetime import datetime 
-import json
 
 # -------- PyTorch -------- #
 import torch
@@ -20,7 +19,7 @@ import infrastructure.utils as utils
 # -----------       run from the command line                      ----------- #
 
 # -------- Testing -------- #
-num_episodes = 100
+num_episodes = 2
 num_time_steps_per_episode = 300
 
 # -------- Environment -------- #
@@ -32,7 +31,7 @@ obs_size = int(num_agents*2*3 + num_obstables * 3 + num_targets * 4)
 act_size = num_agents*2 # x,y,z directions of the propulsion force for each agent  
 
 # -------- Neural network parameters -------- #
-path2actor = "/home/rdhuff/Desktop/drone_swarm_trajectory_optimization_deepRL/runs/2D_gameOfDrones_2022_12_13-20_00_25/episode10000/actor.pth"
+path2actor = "/Users/rdhuff/Desktop/drone_swarm_trajectory_optimization_deepRL/runs/2D_gameOfDrones_2022_12_17-22_25_42/actor.pth"
 hidden_size = 256
 
 # -------- Logging -------- #
