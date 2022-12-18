@@ -249,9 +249,9 @@ class GameOfDronesEnv():
             self.target_found = True
             self.done = True
             print('Target found!')
-        if self.nT > 0 or self.nA <= 0 or self.counter == self.total_steps:
+        if self.nA <= 0 or self.counter == self.total_steps:
             self.target_found = False
-            self.done = True
+            self.done = True 
 
         # compute reward - ** CONSIDER ADDING TIME
         n_mapped_targets = np.sum(self._target_position[:, 3])
